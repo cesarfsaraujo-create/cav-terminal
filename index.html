@@ -126,7 +126,9 @@ main{flex:1;min-height:0;overflow:hidden;position:relative}
 .col-h .t{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .col-h .n{font-family:var(--mono);font-size:10px;color:var(--text3)}
 .col-b{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:7px}
-.mini{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:9px 10px;text-align:left;width:100%}
+.col-k{border-radius:9px;transition:box-shadow .12s}
+.col-k.drop-on .col-b{border-color:var(--gold2);background:rgba(200,146,26,.12)}
+.mini{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:9px 10px;text-align:left;width:100%;touch-action:none;cursor:grab}
 .mini:hover{border-color:var(--border2)}
 .mini .n{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mini .m{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;color:var(--text2)}
@@ -413,6 +415,45 @@ main{flex:1;min-height:0;overflow:hidden;position:relative}
     <div class="m-act">
       <button class="cancel" onclick="closeM('mEvento')">Cancelar</button>
       <button class="ok" onclick="guardarEvento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MODAL NOVA LEAD ====================== -->
+<div class="modal" id="mNovaLead">
+  <div class="modal-in">
+    <h3>Nova lead</h3>
+    <div class="fld">
+      <label>Nome</label>
+      <input id="nlNome" placeholder="Nome da lead">
+    </div>
+    <div class="fld">
+      <label>Telefone</label>
+      <input id="nlTelefone" placeholder="912 345 678">
+    </div>
+    <div class="fld">
+      <label>Valor da proposta (€)</label>
+      <input id="nlValor" type="number" step="1" min="0" placeholder="0">
+    </div>
+    <div class="fld">
+      <label>Origem da lead</label>
+      <input id="nlOrigem" list="dlOrigens" placeholder="Facebook, Site, Referência…">
+    </div>
+    <div class="fld">
+      <label>Tipo</label>
+      <select id="nlTipo">
+        <option value="">—</option>
+        <option value="transferencia">Transferência</option>
+        <option value="aquisicao">Aquisição</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>Estágio</label>
+      <select id="nlEstagio"></select>
+    </div>
+    <div class="m-act">
+      <button class="cancel" onclick="closeM('mNovaLead')">Cancelar</button>
+      <button class="ok" onclick="guardarNovaLead()">Criar</button>
     </div>
   </div>
 </div>
@@ -798,19 +839,118 @@ function rPipe(){
   const ls=ativos(), est=S.estagios.length?S.estagios:ESTAGIOS_FALLBACK;
   const total=ls.reduce((s,l)=>s+(Number(l.valor)||0),0);
   let h=secH('Pipeline · '+ls.length+' leads · '+eur(total));
+  h+='<button class="opt yes" style="text-align:center;margin-bottom:9px" onclick="abrirNovaLead()">＋ Nova lead</button>';
   h+='<div class="board">'+est.map((e,i)=>{
     const col=ls.filter(l=>l.estagio===e);
-    return '<div class="col-k"><div class="col-h"><span class="d" style="background:'+CORES[i%CORES.length]+'"></span>'
+    return '<div class="col-k" data-estagio="'+esc(e)+'"><div class="col-h"><span class="d" style="background:'+CORES[i%CORES.length]+'"></span>'
       +'<span class="t">'+esc(rotulo(e))+'</span><span class="n">'+col.length+'</span></div>'
       +'<div class="col-b">'+(col.length?col.map(l=>{
         const d=dias(l.ultimo_contacto);
-        return '<button class="mini" onclick="abrirLead(\''+l.id+'\')"><div class="n">'+esc(l.nome)+'</div>'
+        return '<button class="mini" data-lead="'+esc(l.id)+'" onclick="abrirLead(\''+l.id+'\')"><div class="n">'+esc(l.nome)+'</div>'
           +'<div class="m">'+(l.valor?'<span class="val" style="font-size:10px">'+eur(l.valor)+'</span>':'')
           +(d!==null?'<span>'+(d===0?'hoje':'há '+d+'d')+'</span>':'')+'</div></button>';
       }).join(''):'<div style="text-align:center;color:var(--text3);font-size:11px;padding:12px">vazio</div>')
       +'</div></div>';
   }).join('')+'</div>';
   $('c-pipe').innerHTML=h;
+  ligarDragPipeline();
+}
+
+/* ---------- 6b. PIPELINE — arrastar lead entre estágios ---------- */
+let DRAGL={pronto:false,ativo:false};
+function ligarDragPipeline(){
+  document.querySelectorAll('.mini[data-lead]').forEach(el=>{
+    el.onpointerdown=ev=>leadDragStart(ev,el);
+  });
+}
+function leadDragStart(ev,el){
+  const id=el.getAttribute('data-lead');
+  const item=S.leads.find(l=>l.id===id); if(!item) return;
+  const col=el.closest('.col-k'); if(!col) return;
+  DRAGL={pronto:true,ativo:false,lead:item,origem:col.getAttribute('data-estagio'),
+        x0:ev.clientX,y0:ev.clientY,ptrId:ev.pointerId,srcEl:el,ultimoCol:null};
+  try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+  el.onpointermove=leadDragMove;
+  el.onpointerup=leadDragEnd;
+  el.onpointercancel=leadDragEnd;
+}
+function leadDragMove(ev){
+  if(!DRAGL.pronto) return;
+  const dx=ev.clientX-DRAGL.x0, dy=ev.clientY-DRAGL.y0;
+  if(!DRAGL.ativo){
+    if(Math.abs(dx)<6 && Math.abs(dy)<6) return;
+    DRAGL.ativo=true; ev.preventDefault();
+    DRAGL.ghost=document.createElement('div');
+    DRAGL.ghost.className='cal-ghost';
+    DRAGL.ghost.textContent=DRAGL.lead.nome||'lead';
+    document.body.appendChild(DRAGL.ghost);
+    DRAGL.srcEl.style.opacity='.3';
+  }
+  if(DRAGL.ghost){ DRAGL.ghost.style.left=ev.clientX+'px'; DRAGL.ghost.style.top=ev.clientY+'px'; }
+  document.querySelectorAll('.col-k.drop-on').forEach(c=>c.classList.remove('drop-on'));
+  const alvo=document.elementFromPoint(ev.clientX,ev.clientY);
+  const col=alvo&&alvo.closest('.col-k');
+  if(col){ col.classList.add('drop-on'); DRAGL.ultimoCol=col.getAttribute('data-estagio'); }
+  else DRAGL.ultimoCol=null;
+}
+function leadDragEnd(ev){
+  const src=DRAGL.srcEl;
+  if(src){
+    src.onpointermove=null; src.onpointerup=null; src.onpointercancel=null;
+    try{ src.releasePointerCapture(ev.pointerId); }catch(e){}
+    src.style.opacity='';
+  }
+  document.querySelectorAll('.col-k.drop-on').forEach(c=>c.classList.remove('drop-on'));
+  if(DRAGL.ghost) DRAGL.ghost.remove();
+  const foiDrag=DRAGL.ativo, alvo=DRAGL.ultimoCol, origem=DRAGL.origem, item=DRAGL.lead;
+  DRAGL={pronto:false,ativo:false};
+  if(foiDrag && alvo && item && alvo!==origem) moverLeadEstagio(item,alvo);
+}
+async function moverLeadEstagio(item,novoEstagio){
+  if(OCUPADO){ toast('Espera a acção anterior terminar.'); return; }
+  const anterior=item.estagio;
+  item.estagio=novoEstagio; render();
+  OCUPADO=true; net('busy'); toast('A mover…');
+  const campos={estagio:novoEstagio, valor:item.valor??null, telefone:item.telefone||'',
+    origem_lead:item.origem_lead||'', tipo:item.tipo||null};
+  try{
+    await apiEditar({acao:'editar_lead',lead_id:item.id,campos});
+    toast('Lead movida para '+rotulo(novoEstagio),'ok');
+    await refresh();
+  }catch(e){
+    item.estagio=anterior; render();
+    toast(e.message,'err'); net('off');
+  }finally{ OCUPADO=false; }
+}
+
+/* ---------- 6c. PIPELINE — criar lead manualmente ---------- */
+function abrirNovaLead(estagioPreset){
+  $('nlNome').value=''; $('nlTelefone').value=''; $('nlValor').value='';
+  $('nlOrigem').value=''; $('nlTipo').value='';
+  const est=S.estagios.length?S.estagios:ESTAGIOS_FALLBACK;
+  $('nlEstagio').innerHTML=est.map(e=>'<option value="'+esc(e)+'"'+(e===(estagioPreset||est[0])?' selected':'')+'>'+esc(rotulo(e))+'</option>').join('');
+  openM('mNovaLead');
+}
+async function guardarNovaLead(){
+  if(OCUPADO) return;
+  const nome=$('nlNome').value.trim();
+  if(!nome){ toast('Dá um nome à lead.'); return; }
+  const campos={
+    nome,
+    telefone:$('nlTelefone').value.trim(),
+    valor:$('nlValor').value!==''?Number($('nlValor').value):null,
+    origem_lead:$('nlOrigem').value.trim(),
+    tipo:$('nlTipo').value||null,
+    estagio:$('nlEstagio').value||null
+  };
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'criar_lead',campos});
+    toast('Lead criada','ok');
+    closeM('mNovaLead');
+    await refresh();
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
 }
 
 function rTarefas(){
@@ -1184,7 +1324,7 @@ async function arrancar(){
 }
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ fecharSheet(); fecharPainel(); closeM('mCfg'); closeM('mEvento'); }
+  if(e.key==='Escape'){ fecharSheet(); fecharPainel(); closeM('mCfg'); closeM('mEvento'); closeM('mNovaLead'); }
 });
 arrancar();
 </script>
