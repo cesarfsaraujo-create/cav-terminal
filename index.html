@@ -686,9 +686,9 @@ const ICONS={
   equipa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.6" r="2.3"/><path d="M3.3 19.2c.5-3.1 2.8-5.2 5.7-5.2s5.2 2.1 5.7 5.2"/><path d="M15.2 14.3c2.1.2 3.8 1.9 4.3 4.4"/></svg>',
 };
 const TABS=[
-  {id:'hoje',   n:'Hoje',    ic:ICONS.hoje,   cnt:()=>minhasTarefas().filter(t=>t.estado!=='feita').length},
+  {id:'hoje',   n:'Hoje',    ic:ICONS.hoje,   cnt:()=>minhasTarefas().filter(t=>t.estado!=='concluida').length},
   {id:'pipe',   n:'Pipeline',ic:ICONS.pipe,   cnt:()=>ativos().length},
-  {id:'tarefas',n:'Tarefas', ic:ICONS.tarefas,cnt:()=>minhasTarefas().filter(t=>t.estado!=='feita').length},
+  {id:'tarefas',n:'Tarefas', ic:ICONS.tarefas,cnt:()=>minhasTarefas().filter(t=>t.estado!=='concluida').length},
   {id:'agenda', n:'Agenda',  ic:ICONS.agenda, cnt:()=>S.agenda.filter(a=>a.estado!=='cancelado').length},
   {id:'equipa', n:'Equipa',  ic:ICONS.equipa, cnt:()=>S.comerciais.length},
 ];
@@ -733,7 +733,7 @@ function linhaLead(l){
 }
 
 function rHoje(){
-  const t=minhasTarefas().filter(x=>x.estado!=='feita');
+  const t=minhasTarefas().filter(x=>x.estado!=='concluida');
   const atras=t.filter(x=>x.prazo&&dias(x.prazo)>0);
   const hj=t.filter(x=>x.prazo&&dias(x.prazo)===0);
   const ag=S.agenda.filter(a=>a.estado!=='cancelado'&&a.quando&&dias(a.quando)<=0&&dias(a.quando)>=-7)
@@ -752,7 +752,7 @@ function rHoje(){
 
 function cardTarefa(t){
   const atras=t.prazo&&dias(t.prazo)>0;
-  const feita=t.estado==='feita';
+  const feita=t.estado==='concluida';
   return '<div class="task'+(atras?' urg':'')+(feita?' is-done':'')+'">'
     +'<button class="bx'+(feita?' done':'')+'" title="'+(feita?'Marcar por fazer':'Marcar concluída')
     +'" onclick="toggleTarefa(\''+esc(t.id)+'\','+(!feita)+')">✓</button>'
@@ -814,7 +814,7 @@ function rPipe(){
 }
 
 function rTarefas(){
-  const t=minhasTarefas(), abertas=t.filter(x=>x.estado!=='feita'), feitas=t.filter(x=>x.estado==='feita');
+  const t=minhasTarefas(), abertas=t.filter(x=>x.estado!=='concluida'), feitas=t.filter(x=>x.estado==='concluida');
   let h=secH('Abertas',abertas.length)+(abertas.length?abertas.map(cardTarefa).join(''):vazio('✓','Sem tarefas abertas.'));
   if(feitas.length) h+=secH('Concluídas',feitas.length)+feitas.slice(0,20).map(cardTarefa).join('');
   $('c-tarefas').innerHTML=h;
@@ -1005,7 +1005,7 @@ async function toggleTarefa(id,concluir){
   if(OCUPADO) return;
   const t=S.tarefas.find(x=>x.id===id); if(!t) return;
   const anterior=t.estado;
-  t.estado=concluir?'feita':'aberta'; render();
+  t.estado=concluir?'concluida':'aberta'; render();
   OCUPADO=true;
   try{
     await apiEditar({acao:'concluir_tarefa',tarefa_id:id,estado:t.estado});
@@ -1043,7 +1043,7 @@ function abrirLead(id){
 
   const hist=S.historico.filter(h=>h.lead_id===id)
     .sort((a,b)=>new Date(b.data||0)-new Date(a.data||0));
-  const tar=S.tarefas.filter(t=>t.lead_id===id&&t.estado!=='feita');
+  const tar=S.tarefas.filter(t=>t.lead_id===id&&t.estado!=='concluida');
   const pen=S.pendencias.filter(p=>p.lead_id===id&&p.estado==='aberta');
   const ag =S.agenda.filter(a=>a.lead_id===id&&a.estado!=='cancelado');
 
@@ -1060,7 +1060,11 @@ function abrirLead(id){
     +'<div class="fld" style="margin-bottom:9px"><label>Valor da proposta (€)</label><input id="edValor" type="number" step="1" min="0" value="'+esc(l.valor||'')+'" placeholder="0"></div>'
     +'<div class="fld" style="margin-bottom:9px"><label>Telefone</label><input id="edTelefone" value="'+esc(l.telefone||'')+'"></div>'
     +'<div class="fld" style="margin-bottom:9px"><label>Origem da lead</label><input id="edOrigem" list="dlOrigens" value="'+esc(l.origem_lead||'')+'" placeholder="Facebook, Site, Referência…"></div>'
-    +'<div class="fld" style="margin-bottom:0"><label>Tipo</label><input id="edTipo" value="'+esc(l.tipo||'')+'"></div>'
+    +'<div class="fld" style="margin-bottom:0"><label>Tipo</label><select id="edTipo">'
+    +'<option value=""'+(!l.tipo?' selected':'')+'>—</option>'
+    +'<option value="transferencia"'+(l.tipo==='transferencia'?' selected':'')+'>Transferência</option>'
+    +'<option value="aquisicao"'+(l.tipo==='aquisicao'?' selected':'')+'>Aquisição</option>'
+    +'</select></div>'
     +'<div style="font-size:10.5px;color:var(--text3);margin-top:9px">Último contacto: '+esc(l.ultimo_contacto?(dataCurta(l.ultimo_contacto)+' · '+quandoRel(l.ultimo_contacto)):'—')+'</div>'
     +'</div>'
     +'<button class="opt yes" style="margin-top:9px;text-align:center" onclick="guardarLead(\''+id+'\')">💾 Guardar alterações</button>'
@@ -1098,7 +1102,7 @@ async function guardarLead(id){
     valor:$('edValor').value!==''?Number($('edValor').value):null,
     telefone:$('edTelefone').value.trim(),
     origem_lead:$('edOrigem').value.trim(),
-    tipo:$('edTipo').value.trim()
+    tipo:$('edTipo').value||null
   };
   OCUPADO=true;
   try{
