@@ -369,6 +369,11 @@ main{flex:1;min-height:0;overflow:hidden;position:relative}
       <input id="cfgDados" placeholder="cav-dados">
     </div>
     <div class="fld">
+      <label>Caminho — edição directa</label>
+      <input id="cfgEditar" placeholder="cav-editar">
+      <div class="help">Usado pelos formulários manuais (agenda, notas, valores, tarefas, origem) — não passa pela interpretação da IA.</div>
+    </div>
+    <div class="fld">
       <label>Chave da app (opcional)</label>
       <input id="cfgKey" placeholder="deixa vazio se não usares">
       <div class="help">Enviada no cabeçalho <span style="font-family:var(--mono)">x-cav-key</span>. Serve para o n8n recusar pedidos de fora.</div>
@@ -380,22 +385,34 @@ main{flex:1;min-height:0;overflow:hidden;position:relative}
   </div>
 </div>
 
-<!-- ====================== MODAL REAGENDAR ====================== -->
-<div class="modal" id="mResched">
+<!-- ====================== MODAL EVENTO (criar/editar agenda) ====================== -->
+<div class="modal" id="mEvento">
   <div class="modal-in">
-    <h3>Reagendar</h3>
+    <h3 id="evModalTitulo">Novo evento</h3>
     <div class="fld">
-      <label>Nova data</label>
-      <input type="date" id="rgData">
+      <label>Título</label>
+      <input id="evTitulo" placeholder="Reunião, chamada, visita…">
     </div>
     <div class="fld">
-      <label>Nova hora</label>
-      <input type="time" id="rgHora">
+      <label>Lead (opcional)</label>
+      <select id="evLead"></select>
     </div>
-    <div class="fld help" style="margin-top:-4px">A alteração passa pela confirmação habitual antes de ficar registada.</div>
+    <div class="fld">
+      <label>Data</label>
+      <input type="date" id="evData">
+    </div>
+    <div class="fld">
+      <label>Hora</label>
+      <input type="time" id="evHora">
+    </div>
+    <div class="fld">
+      <label>Estado</label>
+      <input id="evEstado" list="dlEstados" placeholder="agendado">
+      <datalist id="dlEstados"><option value="agendado"><option value="confirmado"><option value="concluído"><option value="cancelado"></datalist>
+    </div>
     <div class="m-act">
-      <button class="cancel" onclick="closeM('mResched')">Cancelar</button>
-      <button class="ok" onclick="confirmarReagendarModal()">Reagendar</button>
+      <button class="cancel" onclick="closeM('mEvento')">Cancelar</button>
+      <button class="ok" onclick="guardarEvento()">Guardar</button>
     </div>
   </div>
 </div>
@@ -414,6 +431,7 @@ const CFG_DEF={
   base:'https://olivedrab-cat-986392.hostingersite.com',
   inbound:'cav-inbound',
   dados:'cav-dados',
+  editar:'cav-editar',
   key:''
 };
 let CFG={...CFG_DEF};
@@ -453,7 +471,6 @@ let OCUPADO=false;
 let LEAD_ABERTA=null;
 let CAL_MES=(()=>{const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d;})();
 let CAL_SEL=null;
-let RG_ALVO=null;
 
 const ESTAGIOS_FALLBACK=['lead','aguarda_documentos','aguarda_decisao_banco','aprovado',
   'proposta_enviada','aguarda_banco','escritura_marcada','fecho'];
@@ -474,6 +491,16 @@ async function apiFalar(payload){
   const txt=await r.text();
   let j=null; try{ j=JSON.parse(txt); }catch(e){}
   if(!r.ok) throw new Error((j&&(j.message||j.erro))||('Erro '+r.status+': '+txt.slice(0,140)));
+  return j||{};
+}
+/* Edição directa (sem passar pela interpretação por IA da Secretária):
+   usada pelos formulários manuais — agenda, notas, valores, tarefas, origem da lead. */
+async function apiEditar(payload){
+  const r=await fetch(url(CFG.editar),{method:'POST',headers:headers(),
+    body:JSON.stringify({comercial_id:EU?EU.id:null, ...payload})});
+  const txt=await r.text();
+  let j=null; try{ j=JSON.parse(txt); }catch(e){}
+  if(!r.ok||(j&&j.ok===false)) throw new Error((j&&(j.message||j.erro))||('Erro '+r.status+': '+txt.slice(0,140)));
   return j||{};
 }
 
@@ -725,8 +752,10 @@ function rHoje(){
 
 function cardTarefa(t){
   const atras=t.prazo&&dias(t.prazo)>0;
-  return '<div class="task'+(atras?' urg':'')+(t.estado==='feita'?' is-done':'')+'">'
-    +'<span class="bx'+(t.estado==='feita'?' done':'')+'">✓</span>'
+  const feita=t.estado==='feita';
+  return '<div class="task'+(atras?' urg':'')+(feita?' is-done':'')+'">'
+    +'<button class="bx'+(feita?' done':'')+'" title="'+(feita?'Marcar por fazer':'Marcar concluída')
+    +'" onclick="toggleTarefa(\''+esc(t.id)+'\','+(!feita)+')">✓</button>'
     +'<span class="tx">'+esc(t.tarefa||'')
     +'<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">'
     +(t.lead_id?'<span class="chip b">'+esc(nomeLead(t.lead_id))+'</span>':'')
@@ -750,7 +779,8 @@ function cardAgendaDia(a){
     +(a.lead_id?'<span class="chip b">'+esc(nomeLead(a.lead_id))+'</span>':'')
     +'<span class="chip y">'+dataHora(a.quando)+'</span>'
     +(a.estado?'<span class="chip">'+esc(a.estado)+'</span>':'')
-    +'<button class="cal-resched" onclick="abrirReagendar(\''+a.id+'\')">Reagendar</button>'
+    +'<button class="cal-resched" onclick="abrirEditarEvento(\''+a.id+'\')">✎ Editar</button>'
+    +'<button class="cal-resched" style="color:var(--red2);background:rgba(196,40,40,.14)" onclick="apagarEvento(\''+a.id+'\')">Apagar</button>'
     +'</div></span></div>';
 }
 function cardPend(p){
@@ -831,6 +861,7 @@ function rAgenda(){
   let h='<div class="cal-head">'
     +'<button class="icon-btn" onclick="calMudarMes(-1)">‹</button>'
     +'<div class="cal-mes">'+esc(nomeMes)+'</div>'
+    +'<button class="icon-btn" onclick="abrirNovoEvento()" title="Novo evento">＋</button>'
     +'<button class="cal-hoje" onclick="calHojeBtn()">Hoje</button>'
     +'<button class="icon-btn" onclick="calMudarMes(1)">›</button>'
     +'</div>';
@@ -840,6 +871,7 @@ function rAgenda(){
   const evsSel=(porDia[CAL_SEL]||[]).sort((a,b)=>new Date(a.quando)-new Date(b.quando));
   const dSelFmt=new Date(CAL_SEL+'T00:00:00').toLocaleDateString('pt-PT',{weekday:'long',day:'2-digit',month:'long'});
   h+=secH(dSelFmt,evsSel.length);
+  h+='<button class="opt" style="text-align:center;margin-bottom:9px" onclick="abrirNovoEvento(\''+CAL_SEL+'\')">＋ Adicionar evento neste dia</button>';
   h+=evsSel.length? evsSel.map(cardAgendaDia).join('') : vazio('📅','Nada marcado para este dia.');
   $('c-agenda').innerHTML=h;
   ligarDragCalendario();
@@ -896,35 +928,93 @@ function calDragEnd(ev){
   if(foiDrag && alvo && item && alvo!==origem) pedirReagendamento(item,alvo);
 }
 
-function textoReagendar(a,dataISO,horaTxt){
-  const [an,mm,dd]=dataISO.split('-');
-  return 'Reagendar "'+(a.titulo||'evento')+'"'+(a.lead_id?(' de '+nomeLead(a.lead_id)):'')
-    +' para '+dd+'/'+mm+'/'+an+(horaTxt?(' às '+horaTxt):'')+'.';
-}
+/* Arrastar um evento para outro dia edita-o directamente (sem passar pela IA). */
 function pedirReagendamento(item,novoDiaISO,horaOverride){
   if(OCUPADO){ toast('Espera a acção anterior terminar.'); return; }
-  const hora=horaOverride!==undefined?horaOverride:
-    (item.quando? new Date(item.quando).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}) : '');
-  const texto=textoReagendar(item,novoDiaISO,hora);
-  OCUPADO=true; net('busy'); toast('A confirmar reagendamento…');
-  apiFalar({comercial_id:EU.id,texto}).then(r=>tratarResposta(r))
+  const atual=item.quando?new Date(item.quando):null;
+  const horaTxt=horaOverride!==undefined?horaOverride:
+    (atual? String(atual.getHours()).padStart(2,'0')+':'+String(atual.getMinutes()).padStart(2,'0') : '09:00');
+  const quando=novoDiaISO+'T'+horaTxt+':00';
+  OCUPADO=true; net('busy'); toast('A reagendar…');
+  apiEditar({acao:'editar_evento',evento_id:item.id,campos:{quando}})
+    .then(()=>{ toast('Reagendado para '+dataCurta(quando),'ok'); CAL_SEL=novoDiaISO; return refresh(); })
     .catch(e=>{ toast(e.message,'err'); net('off'); })
     .finally(()=>{ OCUPADO=false; });
 }
-function abrirReagendar(id){
-  const a=S.agenda.find(x=>x.id===id); if(!a) return;
-  RG_ALVO=a;
-  const d=a.quando?new Date(a.quando):new Date();
-  $('rgData').value=isoLocal(d);
-  $('rgHora').value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-  openM('mResched');
+
+/* ---------- 7c. AGENDA — criar / editar / apagar evento manualmente ---------- */
+let EV_ALVO=null; // evento em edição (null = a criar um novo)
+function opcoesLeadsHtml(selecionadoId){
+  return '<option value="">— sem lead —</option>'+meusLeads().map(l=>
+    '<option value="'+esc(l.id)+'"'+(l.id===selecionadoId?' selected':'')+'>'+esc(l.nome)+'</option>').join('');
 }
-function confirmarReagendarModal(){
-  const a=RG_ALVO; if(!a) return;
-  const dataV=$('rgData').value, horaV=$('rgHora').value;
+function abrirNovoEvento(diaISO){
+  EV_ALVO=null;
+  $('evModalTitulo').textContent='Novo evento';
+  $('evTitulo').value='';
+  $('evLead').innerHTML=opcoesLeadsHtml(null);
+  $('evData').value=diaISO||CAL_SEL||isoLocal(new Date());
+  $('evHora').value='09:00';
+  $('evEstado').value='agendado';
+  openM('mEvento');
+}
+function abrirEditarEvento(id){
+  const a=S.agenda.find(x=>x.id===id); if(!a) return;
+  EV_ALVO=a;
+  $('evModalTitulo').textContent='Editar evento';
+  $('evTitulo').value=a.titulo||'';
+  $('evLead').innerHTML=opcoesLeadsHtml(a.lead_id||null);
+  const d=a.quando?new Date(a.quando):new Date();
+  $('evData').value=isoLocal(d);
+  $('evHora').value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  $('evEstado').value=a.estado||'agendado';
+  openM('mEvento');
+}
+async function guardarEvento(){
+  if(OCUPADO) return;
+  const titulo=$('evTitulo').value.trim();
+  const dataV=$('evData').value, horaV=$('evHora').value||'09:00';
+  if(!titulo){ toast('Dá um título ao evento.'); return; }
   if(!dataV){ toast('Escolhe uma data.'); return; }
-  closeM('mResched');
-  pedirReagendamento(a,dataV,horaV);
+  const campos={titulo, lead_id:$('evLead').value||null, quando:dataV+'T'+horaV+':00',
+    estado:$('evEstado').value.trim()||'agendado'};
+  OCUPADO=true;
+  try{
+    if(EV_ALVO) await apiEditar({acao:'editar_evento',evento_id:EV_ALVO.id,campos});
+    else await apiEditar({acao:'criar_evento',campos});
+    toast(EV_ALVO?'Evento atualizado':'Evento criado','ok');
+    closeM('mEvento'); CAL_SEL=dataV;
+    await refresh();
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
+}
+async function apagarEvento(id){
+  if(OCUPADO) return;
+  if(!confirm('Apagar este evento da agenda?')) return;
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'apagar_evento',evento_id:id});
+    toast('Evento apagado','ok');
+    await refresh();
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
+}
+
+/* ---------- 7d. TAREFAS — check directo ---------- */
+async function toggleTarefa(id,concluir){
+  if(OCUPADO) return;
+  const t=S.tarefas.find(x=>x.id===id); if(!t) return;
+  const anterior=t.estado;
+  t.estado=concluir?'feita':'aberta'; render();
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'concluir_tarefa',tarefa_id:id,estado:t.estado});
+    toast(concluir?'Tarefa concluída':'Tarefa reaberta','ok');
+    await refresh();
+  }catch(e){
+    t.estado=anterior; render();
+    toast(e.message,'err');
+  }finally{ OCUPADO=false; }
 }
 
 function rEquipa(){
@@ -957,18 +1047,27 @@ function abrirLead(id){
   const pen=S.pendencias.filter(p=>p.lead_id===id&&p.estado==='aberta');
   const ag =S.agenda.filter(a=>a.lead_id===id&&a.estado!=='cancelado');
 
+  const estagiosOpts=(S.estagios.length?S.estagios:ESTAGIOS_FALLBACK).map(e=>
+    '<option value="'+esc(e)+'"'+(e===l.estagio?' selected':'')+'>'+esc(rotulo(e))+'</option>').join('');
+
   let h='';
   h+='<div class="p-quick">'
-    +'<button onclick="notaRapida(\''+id+'\')">✎ Nota rápida</button>'
+    +'<button onclick="notaRapida(\''+id+'\')">🎙 Ditar nota</button>'
     +'<button onclick="setTab(\'pipe\')">↗ Ver no pipeline</button>'
     +'</div>';
   h+='<div class="card">'
-    +kv('Estágio',rotulo(l.estagio))
-    +kv('Valor',eur(l.valor))
-    +kv('Telefone',l.telefone||'—')
-    +kv('Origem',l.origem_lead||'—')
-    +kv('Tipo',l.tipo||'—')
-    +kv('Último contacto',l.ultimo_contacto?(dataCurta(l.ultimo_contacto)+' · '+quandoRel(l.ultimo_contacto)):'—')
+    +'<div class="fld" style="margin-bottom:9px"><label>Estágio</label><select id="edEstagio">'+estagiosOpts+'</select></div>'
+    +'<div class="fld" style="margin-bottom:9px"><label>Valor da proposta (€)</label><input id="edValor" type="number" step="1" min="0" value="'+esc(l.valor||'')+'" placeholder="0"></div>'
+    +'<div class="fld" style="margin-bottom:9px"><label>Telefone</label><input id="edTelefone" value="'+esc(l.telefone||'')+'"></div>'
+    +'<div class="fld" style="margin-bottom:9px"><label>Origem da lead</label><input id="edOrigem" list="dlOrigens" value="'+esc(l.origem_lead||'')+'" placeholder="Facebook, Site, Referência…"></div>'
+    +'<div class="fld" style="margin-bottom:0"><label>Tipo</label><input id="edTipo" value="'+esc(l.tipo||'')+'"></div>'
+    +'<div style="font-size:10.5px;color:var(--text3);margin-top:9px">Último contacto: '+esc(l.ultimo_contacto?(dataCurta(l.ultimo_contacto)+' · '+quandoRel(l.ultimo_contacto)):'—')+'</div>'
+    +'</div>'
+    +'<button class="opt yes" style="margin-top:9px;text-align:center" onclick="guardarLead(\''+id+'\')">💾 Guardar alterações</button>'
+    +'<datalist id="dlOrigens"><option value="Facebook Ads"><option value="Instagram"><option value="Google Ads"><option value="Site"><option value="Referência"><option value="Feira"><option value="Chamada fria"><option value="WhatsApp"></datalist>';
+  h+='<div class="card" style="margin-top:9px">'
+    +'<div class="fld" style="margin-bottom:8px"><label>Adicionar anotação</label><textarea id="edNota" rows="3" placeholder="Escreve uma nota sobre esta lead…"></textarea></div>'
+    +'<button class="opt yes" style="text-align:center" onclick="guardarNota(\''+id+'\')">＋ Adicionar ao histórico</button>'
     +'</div>';
   if(l.ultima_nota) h+='<div class="card" style="margin-top:9px"><div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);margin-bottom:6px">Última nota</div><div style="font-size:12.5px;line-height:1.5">'+esc(l.ultima_nota)+'</div></div>';
   if(tar.length) h+=secH('Tarefas',tar.length)+tar.map(cardTarefa).join('');
@@ -991,19 +1090,54 @@ function notaRapida(id){
   $('micTxt').value='Nota sobre '+l.nome+': ';
   setTimeout(()=>{ const el=$('micTxt'); el.focus(); el.setSelectionRange(el.value.length,el.value.length); },260);
 }
+async function guardarLead(id){
+  if(OCUPADO) return;
+  const l=leadDe(id); if(!l) return;
+  const campos={
+    estagio:$('edEstagio').value,
+    valor:$('edValor').value!==''?Number($('edValor').value):null,
+    telefone:$('edTelefone').value.trim(),
+    origem_lead:$('edOrigem').value.trim(),
+    tipo:$('edTipo').value.trim()
+  };
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'editar_lead',lead_id:id,campos});
+    Object.assign(l,campos);
+    toast('Lead atualizada','ok');
+    await refresh();
+    if(LEAD_ABERTA===id) abrirLead(id);
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
+}
+async function guardarNota(id){
+  if(OCUPADO) return;
+  const txt=$('edNota').value.trim();
+  if(!txt){ toast('Escreve algo primeiro.'); return; }
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'nota_manual',lead_id:id,nota:txt});
+    toast('Nota adicionada','ok');
+    await refresh();
+    if(LEAD_ABERTA===id) abrirLead(id);
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
+}
 
 /* ---------- 9. DEFINIÇÕES ---------- */
 function openM(id){ $(id).classList.add('on'); }
 function closeM(id){ $(id).classList.remove('on'); }
 function openCfg(){
   $('cfgBase').value=CFG.base; $('cfgIn').value=CFG.inbound;
-  $('cfgDados').value=CFG.dados; $('cfgKey').value=CFG.key||'';
+  $('cfgDados').value=CFG.dados; $('cfgEditar').value=CFG.editar||CFG_DEF.editar;
+  $('cfgKey').value=CFG.key||'';
   openM('mCfg');
 }
 function saveCfg(){
   CFG={base:$('cfgBase').value.trim()||CFG_DEF.base,
        inbound:$('cfgIn').value.trim()||CFG_DEF.inbound,
        dados:$('cfgDados').value.trim()||CFG_DEF.dados,
+       editar:$('cfgEditar').value.trim()||CFG_DEF.editar,
        key:$('cfgKey').value.trim()};
   try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG));}catch(e){}
   closeM('mCfg'); toast('Guardado','ok'); arrancar();
@@ -1046,7 +1180,7 @@ async function arrancar(){
 }
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ fecharSheet(); fecharPainel(); closeM('mCfg'); closeM('mResched'); }
+  if(e.key==='Escape'){ fecharSheet(); fecharPainel(); closeM('mCfg'); closeM('mEvento'); }
 });
 arrancar();
 </script>
