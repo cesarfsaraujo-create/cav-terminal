@@ -1192,7 +1192,7 @@ function abrirLead(id){
 
   let h='';
   h+='<div class="p-quick">'
-    +'<button onclick="notaRapida(\''+id+'\')">🎙 Ditar nota</button>'
+    +'<button data-ditar="'+esc(id)+'" onclick="notaRapida(\''+id+'\')">🎙 Ditar nota</button>'
     +'<button onclick="setTab(\'pipe\')">↗ Ver no pipeline</button>'
     +'</div>';
   h+='<div class="card">'
@@ -1226,13 +1226,68 @@ function abrirLead(id){
   $('panel').classList.add('on'); $('scrim').classList.add('on');
 }
 function kv(k,v){ return '<div class="kv"><span class="k">'+esc(k)+'</span><span class="v">'+esc(v)+'</span></div>'; }
-function fecharPainel(){ LEAD_ABERTA=null; $('panel').classList.remove('on');
-  if(!PEND) $('scrim').classList.remove('on'); }
+function fecharPainel(){
+  if(notaGravando) pararDitarNota();
+  LEAD_ABERTA=null; $('panel').classList.remove('on');
+  if(!PEND) $('scrim').classList.remove('on');
+}
+
+/* Ditar nota: a lead já é conhecida (o painel dela está aberto), por isso
+   escreve directo via apiEditar/nota_manual — sem passar pela Secretária/IA,
+   que existe para resolver ambiguidade que aqui não há. Só cai no fallback de
+   escrever na caixa principal quando o browser não tem reconhecimento de voz
+   fiável (iOS — ver nota em iniciarVoz). */
+let notaRec=null, notaGravando=false;
+function botaoDitar(id,estado){
+  const b=document.querySelector('[data-ditar="'+id+'"]');
+  if(!b) return;
+  b.textContent = estado==='rec' ? '■ A gravar… toca para enviar' : '🎙 Ditar nota';
+}
 function notaRapida(id){
+  if(OCUPADO||aGravar) return;
   const l=leadDe(id); if(!l) return;
-  fecharPainel();
-  $('micTxt').value='Nota sobre '+l.nome+': ';
-  setTimeout(()=>{ const el=$('micTxt'); el.focus(); el.setSelectionRange(el.value.length,el.value.length); },260);
+  if(notaGravando){ pararDitarNota(); return; }
+  if(!SR || isIOS){
+    fecharPainel();
+    $('micTxt').value='Nota sobre '+l.nome+': ';
+    setTimeout(()=>{ const el=$('micTxt'); el.focus(); el.setSelectionRange(el.value.length,el.value.length); },260);
+    return;
+  }
+  try{
+    notaRec=new SR(); notaRec.lang='pt-PT'; notaRec.continuous=true; notaRec.interimResults=false;
+    let final='';
+    notaRec.onresult=ev=>{
+      for(let i=ev.resultIndex;i<ev.results.length;i++){
+        if(ev.results[i].isFinal) final+=ev.results[i][0].transcript+' ';
+      }
+    };
+    notaRec.onerror=ev=>{
+      if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
+        toast('Sem permissão para o microfone.','err');
+      }
+    };
+    notaRec.onend=()=>{
+      notaGravando=false; botaoDitar(id,'');
+      const txt=final.trim();
+      if(txt) guardarNotaDitada(id,txt);
+    };
+    notaRec.start(); notaGravando=true; botaoDitar(id,'rec');
+  }catch(e){ toast('Sem acesso ao microfone — escreve na caixa.','err'); }
+}
+function pararDitarNota(){
+  notaGravando=false;
+  if(notaRec){ try{notaRec.stop();}catch(e){} }
+}
+async function guardarNotaDitada(id,txt){
+  if(OCUPADO) return;
+  OCUPADO=true;
+  try{
+    await apiEditar({acao:'nota_manual',lead_id:id,nota:txt});
+    toast('Nota adicionada','ok');
+    await refresh();
+    if(LEAD_ABERTA===id) abrirLead(id);
+  }catch(e){ toast(e.message,'err'); }
+  finally{ OCUPADO=false; }
 }
 async function guardarLead(id){
   if(OCUPADO) return;
