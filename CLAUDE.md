@@ -8,14 +8,19 @@ Um comercial fala ou escreve no Terminal → o n8n transcreve → o Gemini
 interpreta contra o prompt da Secretária → devolve um cartão de confirmação →
 quando o comercial confirma, o Committer escreve no Airtable.
 
-Três peças, em três sítios:
+Três peças:
 
 | peça | onde vive | neste repositório |
 |---|---|---|
 | workflows | n8n (Hostinger) | `workflows/` |
 | prompt da Secretária | dentro de um workflow do n8n | `prompts/` |
-| Terminal | GitHub Pages | repositório próprio |
+| Terminal | GitHub Pages, servido a partir deste repositório | `index.html` |
 | dados | Airtable `appIdD2RG5S0lWvfV` | fora daqui, de propósito |
+
+O Terminal e o CAV costumavam viver em repositórios separados; desde
+19/09/2026 partilham um único repositório (o Terminal é a face interactiva,
+o resto do repositório é a estrutura por trás). O histórico de ambos foi
+fundido, sem ficheiros em comum entre os dois lados.
 
 Workflows principais: `bSTGP7PErDam8WPE` (Inbound), `7DoKXQGDJH4yivLK`
 (Committer), `FjelO9bMQh1Mr21I` (prompt estático).
