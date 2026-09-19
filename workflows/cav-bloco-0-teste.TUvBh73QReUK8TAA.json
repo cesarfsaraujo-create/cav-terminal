@@ -1,0 +1,190 @@
+{
+  "id": "TUvBh73QReUK8TAA",
+  "name": "CAV - Bloco 0 (Teste)",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cav-skeleton",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b055eeb3-8506-4b05-8cf6-c211bfd98799",
+      "name": "Webhook Esqueleto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        160
+      ],
+      "webhookId": "e93d4b6e-2882-4457-9cff-78edfaa0fc51"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Embrulha a acao de teste (write path sem IA).\nconst b = $json.body || $json || {};\nreturn [{ json: {\n  leadId: b.leadId || null,\n  vendedor: b.vendedor || b.comercialId || 'teste',\n  descricao: b.descricao || 'evento de teste do Bloco 0',\n} }];\n"
+      },
+      "id": "6cb893e4-ab52-4d94-9621-c6ba62c8bf84",
+      "name": "Preparar evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.airtable.com/v0/appx8fZmFTJY7XtLP/EVENTOS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { fields: { vendedor: $json.vendedor, transcricao: $json.descricao, origem: 'bloco0-teste', estado: 'rastreio' } } }}",
+        "options": {}
+      },
+      "id": "e03dedd3-23c4-499c-8820-7d011aee4e43",
+      "name": "Criar EVENTO (rastreio)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Wt3I28i2c8Hc1PKd",
+          "name": "Airtable Token"
+        },
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Poe no formato esperado pelo Committer (Router de escrita).\nconst j = $('Preparar evento').item.json;\nconst eventoId = $json.id;\nreturn [{ json: {\n  eventoId,\n  secretariaJson: { intent: 'nota', lead_id: j.leadId, resumo: j.descricao },\n} }];\n"
+      },
+      "id": "3335e6d0-4497-4fa4-a3cd-5e018ee43a3e",
+      "name": "Preparar p/ Committer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "7DoKXQGDJH4yivLK",
+          "mode": "id",
+          "cachedResultName": "7DoKXQGDJH4yivLK"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "24995704-9b47-42e4-a983-6742dfd685e2",
+      "name": "Chamar Committer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        160
+      ],
+      "notesInFlow": false,
+      "notes": "Substitui 7DoKXQGDJH4yivLK pelo ID real do Committer."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, eventoId: $('Preparar p/ Committer').item.json.eventoId } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "069beb70-22ff-4f04-948c-21911944d0df",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Esqueleto": {
+      "main": [
+        [
+          {
+            "node": "Preparar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar evento": {
+      "main": [
+        [
+          {
+            "node": "Criar EVENTO (rastreio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar EVENTO (rastreio)": {
+      "main": [
+        [
+          {
+            "node": "Preparar p/ Committer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar p/ Committer": {
+      "main": [
+        [
+          {
+            "node": "Chamar Committer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Committer": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,915 @@
+{
+  "id": "q9usAIFsJm1MDQLb",
+  "name": "CAV — Workflow A · Inbound (write path)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cav-inbound",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "61014434-180a-4161-87b2-20914e19d1bb",
+      "name": "Webhook (voz/texto)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -7008,
+        -416
+      ],
+      "webhookId": "cav-inbound"
+    },
+    {
+      "parameters": {
+        "jsCode": "// PREP INPUT — normaliza o corpo do webhook vindo da app.\n// Contrato de entrada (POST /webhook/cav-inbound):\n// { comercial_id, texto? , audio_base64? , audio_mime? ,\n//   evento_pendente_id? , evento_pendente? {dominante,transcricao_original,eventos} , resposta? }\nconst body = $input.first().json.body || $input.first().json || {};\n\nconst comercial_id = (body.comercial_id || '').trim();\nconst texto        = (body.texto || '').trim();\nconst audio_base64 = body.audio_base64 || '';\nconst audio_mime   = body.audio_mime || 'audio/webm';\n\nif (!comercial_id) throw new Error('comercial_id em falta — a app tem de identificar o comercial.');\nconst resposta = body.resposta || '';\nif (!texto && !audio_base64 && !resposta) throw new Error('Sem conteudo: envia \"texto\", \"audio_base64\" ou \"resposta\".');\n\n// Ref legivel e unica do evento: EVT-AAAAMMDD-HHMMSS-XXX\nconst d = new Date();\nconst p = n => String(n).padStart(2, '0');\nconst ref = 'EVT-' + d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate())\n          + '-' + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds())\n          + '-' + Math.random().toString(36).slice(2, 5).toUpperCase();\n\nreturn [{\n  json: {\n    modo: audio_base64 ? 'audio' : 'texto',\n    tem_audio: !!audio_base64,\n    comercial_id,\n    texto: texto || resposta,\n    audio_base64,\n    audio_mime,\n    evento_pendente_id: body.evento_pendente_id || null,\n    evento_pendente: body.evento_pendente || null,\n    resposta: resposta || null,\n    ref,\n    recebido_em: d.toISOString(),\n  }\n}];\n"
+      },
+      "id": "6d219cc6-159e-4d3a-92c7-6f2c03d13bbc",
+      "name": "Prep Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6784,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-audio",
+              "leftValue": "={{ $json.has_audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "798ce7b6-4c06-4032-b6bf-401060197c28",
+      "name": "IF Áudio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -6560,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// BASE64 -> BINARIO — prepara o ficheiro de audio para o Whisper.\nconst out = [];\nfor (const item of $input.all()) {\n  const b64  = item.json.audio_base64 || '';\n  const mime = item.json.audio_mime || 'audio/webm';\n  // \"audio/webm;codecs=opus\" -> \"webm\"\n  const ext  = (mime.split('/')[1] || 'webm').split(';')[0];\n  const buf  = Buffer.from(b64, 'base64');\n  if (!buf.length) throw new Error('audio_base64 vazio ou invalido.');\n  const bin  = await this.helpers.prepareBinaryData(buf, 'audio.' + ext, mime);\n  const json = { ...item.json };\n  delete json.audio_base64; // nao arrastar o base64 pelo resto do fluxo\n  out.push({ json, binary: { data: bin } });\n}\nreturn out;\n"
+      },
+      "id": "120aa11a-a27b-455f-9f85-03870e5a54b9",
+      "name": "Base64 → Binário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6336,
+        -512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "pt"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "529093a1-c161-44d8-b467-786f71ee3e05",
+      "name": "Whisper (transcrição)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6112,
+        -512
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Z1JWYetfmfWh2Fti",
+          "name": "OpenAI Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// TRANSCRICAO (AUDIO) — resposta do Whisper -> campo transcricao.\nconst prep = $('Prep Input').first().json;\nconst r = $input.first().json || {};\nconst texto = (r.text || r.transcricao || '').trim();\nif (!texto) throw new Error('Whisper devolveu transcricao vazia.');\nconst { audio_base64, ...limpo } = prep;\nreturn [{ json: { ...limpo, transcricao: texto, origem_transcricao: 'whisper' } }];\n"
+      },
+      "id": "9f6fbaa8-b75f-467b-a441-20b10ef0cdd0",
+      "name": "Transcrição (áudio)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5888,
+        -512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TRANSCRICAO (TEXTO) — a app ja transcreveu no browser; passa a limpo.\nconst prep = $('Prep Input').first().json;\nconst texto = (prep.texto || '').trim();\nif (!texto) throw new Error('Texto vazio.');\nconst { audio_base64, ...limpo } = prep;\nreturn [{ json: { ...limpo, transcricao: texto, origem_transcricao: 'app' } }];\n"
+      },
+      "id": "2ffec765-0dab-4d1a-a9ea-59f12eca1b99",
+      "name": "Transcrição (texto)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5888,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Eventos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Ref: $json.ref, Comerciais: $json.comercial_id ? [$json.comercial_id] : [], Transcricao: $json.transcricao, Estado: 'recebido' } }) }}",
+        "options": {}
+      },
+      "id": "e27c2c8c-5a94-4b0c-9e11-efbfe7b23164",
+      "name": "Criar Evento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5664,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Comerciais/{{ $('Prep Input').item.json.comercial_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {}
+      },
+      "id": "81f41993-a6ae-47ab-89cf-95c72864017d",
+      "name": "Get Comercial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5440,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "NOT({estagio} = 'nutricao')"
+            },
+            {
+              "name": "pageSize",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e700cfd5-1ac5-4145-9dce-6c35737016f1",
+      "name": "Get CANDIDATOS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5216,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/CONFIG",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "288c9a60-eb44-424f-869d-ced5b61eb9bf",
+      "name": "Get CONFIG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4992,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// MONTAR PAYLOAD — constroi o bloco dinamico que a Secretaria recebe (contrato §2 v2.12).\n// Entradas: Transcricao (audio|texto), Get Comercial, Get CANDIDATOS, Get CONFIG.\n\nconst prep = $('Prep Input').first().json;\nconst transNodeName = prep.tem_audio ? 'Transcrição (áudio)' : 'Transcrição (texto)';\nlet transVal = '';\ntry { transVal = ($(transNodeName).first().json.transcricao || '').trim(); } catch (e) {}\nconst base = { ...prep, transcricao: transVal };\nconst trans = base.transcricao || '';\n\n// ---- comercial -------------------------------------------------------------\nlet comercial = {};\ntry { comercial = $('Get Comercial').first().json || {}; } catch (e) {}\nconst cf = comercial.fields || {};\nconst VENDEDOR = cf.Nome || cf.nome || 'Desconhecido';\n\n// ---- sequencia de estagios (universal §3.6.1) -------------------------------\nconst SEQ_UNIVERSAL = ['lead','aguarda_documentos','aguarda_decisao_banco','aprovado',\n                       'proposta_enviada','aguarda_banco','escritura_marcada','fecho'];\n\n// ---- CONFIG ----------------------------------------------------------------\n// Cada linha da tabela CONFIG e um par chave/valor; o valor pode ser JSON.\nlet cfgRows = [];\ntry { cfgRows = ($('Get CONFIG').first().json.records) || []; } catch (e) {}\nconst cfg = {};\nfor (const r of cfgRows) {\n  const f = r.fields || {};\n  const k = f.chave || f.Chave || f.key || f.Nome || f.nome;\n  const v = f.valor !== undefined ? f.valor : (f.Valor !== undefined ? f.Valor : f.value);\n  if (!k) continue;\n  let parsed = v;\n  if (typeof v === 'string') { try { parsed = JSON.parse(v); } catch (e) { parsed = v; } }\n  cfg[String(k).trim().toLowerCase()] = parsed;\n}\nconst seqCfg = cfg['sequencia_estagios'] || cfg['sequencia'] || null;\nconst SEQUENCIA_ESTAGIOS = { ordem: (seqCfg && seqCfg.ordem) || (Array.isArray(seqCfg) ? seqCfg : SEQ_UNIVERSAL) };\nconst ETAPAS_OBRIGATORIAS = cfg['etapas_obrigatorias'] || [];\nconst MOTIVOS_SAIDA       = cfg['motivos_saida'] || null;\nconst FLAGS_AUTO          = cfg['flags_auto'] || [];\n\n// ---- candidatos (leads ativas do comercial) --------------------------------\nlet leadRecs = [];\ntry { leadRecs = ($('Get CANDIDATOS').first().json.records) || []; } catch (e) {}\nconst hoje = new Date();\nconst diasDesde = iso => {\n  if (!iso) return null;\n  const d = new Date(iso); if (isNaN(d)) return null;\n  return Math.floor((hoje - d) / 86400000);\n};\n// so as leads deste comercial (o nome do campo de ligacao varia; aceitar variantes)\nconst doComercial = r => {\n  const f = r.fields || {};\n  const v = f.Comercial || f.Comerciais || f.comercial || null;\n  const ids = Array.isArray(v) ? v : (v ? [v] : []);\n  return !ids.length || ids.includes(base.comercial_id);\n};\nconst CANDIDATOS = leadRecs.filter(doComercial).map(r => {\n  const f = r.fields || {};\n  const fase = f.estagio || f.Estagio || f['Estágio'] || 'lead';\n  const idx  = SEQUENCIA_ESTAGIOS.ordem.indexOf(fase);\n  const cand = {\n    id: r.id,\n    nome: f.Nome || f.nome || '',\n    alcunhas: f.alcunhas ? String(f.alcunhas).split(',').map(s => s.trim()).filter(Boolean) : [],\n    telefone: f.Telefone || f.telefone || null,\n    fase_atual: fase,\n    tipo: f.tipo || 'aquisicao',\n    ultima_nota: f.ultima_nota || null,\n  };\n  if (idx >= 0) cand.indice_fase = idx;\n  const dd = diasDesde(f.ultimo_contacto || f.Data_ultimo_contacto || null);\n  if (dd !== null) cand.dias_desde_ultimo_contacto = dd;\n  if (fase === 'aguarda_documentos' && f.checklist_documentos) {\n    try {\n      cand.checklist_documentos = typeof f.checklist_documentos === 'string'\n        ? JSON.parse(f.checklist_documentos) : f.checklist_documentos;\n    } catch (e) {}\n  }\n  return cand;\n});\n\n// ---- calendarios (resolver datas por consulta, nunca por calculo) ----------\nconst DIAS = ['domingo','segunda-feira','terca-feira','quarta-feira','quinta-feira','sexta-feira','sabado'];\nconst MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst iso = d => d.toISOString().slice(0, 10);\n\nconst CALENDARIO = [];\nfor (let i = 0; i <= 30; i++) {\n  const d = new Date(hoje.getTime() + i * 86400000);\n  CALENDARIO.push({ data: iso(d), dia_semana: DIAS[d.getDay()], offset_dias: i });\n}\nconst CALENDARIO_MESES = [];\nfor (let m = 0; m < 12; m++) {\n  const d = new Date(hoje.getFullYear(), hoje.getMonth() + m, 1);\n  CALENDARIO_MESES.push({ mes: MESES[d.getMonth()], ano: d.getFullYear(), dia_1: iso(d), offset_meses: m });\n}\nconst DATA_HOJE = iso(hoje) + ' (' + DIAS[hoje.getDay()] + ')';\n\n// ---- evento pendente (quando o vendedor responde a uma confirmacao) --------\n// A app devolve o bilhete da 1a volta tal como o recebeu (§2: dominante,\n// transcricao_original, eventos). Evita uma segunda leitura ao Airtable.\nlet EVENTO_PENDENTE = null;\nconst ep = base.evento_pendente;\nif (ep && Array.isArray(ep.eventos) && ep.eventos.length) {\n  EVENTO_PENDENTE = {\n    dominante: ep.dominante || ep.eventos[0].id || null,\n    transcricao_original: ep.transcricao_original || '',\n    eventos: ep.eventos,\n  };\n}\n\n// ---- bloco dinamico --------------------------------------------------------\nconst dinamico = {\n  DATA_HOJE,\n  VENDEDOR,\n  TRANSCRICAO: trans,\n  CANDIDATOS,\n  CALENDARIO,\n  CALENDARIO_MESES,\n  SEQUENCIA_ESTAGIOS,\n  ETAPAS_OBRIGATORIAS,\n  FLAGS_AUTO,\n};\nif (MOTIVOS_SAIDA) dinamico.MOTIVOS_SAIDA = MOTIVOS_SAIDA;\nif (EVENTO_PENDENTE) dinamico.EVENTO_PENDENTE = EVENTO_PENDENTE;\n\nconst mensagem_utilizador =\n  Object.entries(dinamico)\n    .map(([k, v]) => k + ': ' + (typeof v === 'string' ? v : JSON.stringify(v)))\n    .join('\\n\\n');\n\nreturn [{\n  json: {\n    ...base,\n    vendedor: VENDEDOR,\n    n_candidatos: CANDIDATOS.length,\n    dinamico,\n    mensagem_utilizador,\n  }\n}];\n"
+      },
+      "id": "f765b544-92a2-4746-bf3f-d8564e13e058",
+      "name": "Montar Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4768,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ system_instruction: { parts: [{ text: $json.data }] }, contents: [{ role: 'user', parts: [{ text: $('Montar Payload').first().json.mensagem_utilizador }] }], generationConfig: { temperature: 0, topP: 1, candidateCount: 1, seed: 42, maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: $json.schema, thinkingConfig: { thinkingLevel: 'medium' } }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' } ] }) }}",
+        "options": {}
+      },
+      "id": "b3e7a0c9-a42b-4c23-b466-c7ec5fc01655",
+      "name": "Chamar Secretária (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4544,
+        -416
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Zs54VAbrgvIn56RG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// PARSE INTERPRETACAO — valida a saida da Secretaria (§6: JSON estrito, nada mais).\nconst base = $('Montar Payload').first().json;\nconst resp = $input.first().json || {};\n\n// Resposta da Anthropic Messages API\nlet bruto = '';\nif (Array.isArray(resp.content)) bruto = resp.content.map(b => b.text || '').join('');\nelse if (typeof resp.completion === 'string') bruto = resp.completion;\nelse if (typeof resp === 'string') bruto = resp;\n\nif (resp.type === 'error' || resp.error) {\n  throw new Error('Secretaria devolveu erro: ' + JSON.stringify(resp.error || resp).slice(0, 300));\n}\n\n// Limpar crases/prosa a toda a volta e ficar so com o objecto JSON\nlet txt = (bruto || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\nconst i = txt.indexOf('{'), j = txt.lastIndexOf('}');\nif (i < 0 || j <= i) throw new Error('Secretaria nao devolveu JSON. Recebido: ' + txt.slice(0, 200));\n\nlet out;\ntry { out = JSON.parse(txt.slice(i, j + 1)); }\ncatch (e) { throw new Error('JSON invalido da Secretaria: ' + e.message + ' | ' + txt.slice(0, 200)); }\n\n// Forma minima garantida\nconst eventos = Array.isArray(out.eventos) ? out.eventos : [];\nconst meta = Object.assign({\n  multiplas_accoes: eventos.length > 1,\n  confirmacoes: 0,\n  transcricao_incerta: false,\n  sem_accao: eventos.length === 0,\n  transcricao_invalida_multilead: false,\n  leads_detetadas: [],\n}, out.meta || {});\n\n// Normalizacoes defensivas (§6: dados e sempre objecto; avisos e sempre array)\nfor (const [n, ev] of eventos.entries()) {\n  if (!ev.id) ev.id = 'e' + (n + 1);\n  if (!ev.dados || typeof ev.dados !== 'object') ev.dados = {};\n  if (!Array.isArray(ev.avisos)) ev.avisos = [];\n  if (!Array.isArray(ev.opcoes_confirmacao)) ev.opcoes_confirmacao = [];\n  if (typeof ev.requer_confirmacao !== 'boolean') ev.requer_confirmacao = true;\n  if (!ev.ancora || typeof ev.ancora !== 'object') ev.ancora = { estado: 'nao_aplicavel', lead_id: null };\n}\n\n// Quem faz a pergunta ao comercial e o dominante da agregacao (§6.1)\nconst perguntas = eventos.filter(e => e.confirmacao_humana);\nconst dominante = perguntas[0] || null;\nconst precisa_confirmacao = perguntas.length > 0;\nconst lead_id = (eventos.find(e => e.ancora && e.ancora.lead_id) || { ancora: {} }).ancora.lead_id || null;\nconst ancora_ambigua = eventos.some(e => e.ancora && e.ancora.estado === 'ambigua');\n\nreturn [{\n  json: {\n    ...base,\n    interpretacao: { eventos, meta, dominante: dominante ? dominante.id : null },\n    eventos,\n    meta,\n    n_eventos: eventos.length,\n    precisa_confirmacao,\n    ancora_ambigua,\n    lead_id,\n    pergunta: dominante ? dominante.confirmacao_humana : null,\n    opcoes: dominante ? dominante.opcoes_confirmacao : [],\n    sem_accao: !!meta.sem_accao || eventos.length === 0,\n  }\n}];\n"
+      },
+      "id": "7b5409e8-921c-4152-9ac4-20c50eef51fb",
+      "name": "Parse Interpretação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4320,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Eventos/{{ $('Criar Evento').first().json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { interpretacao: JSON.stringify($json.interpretacao), Estado: 'interpretado' } }) }}",
+        "options": {}
+      },
+      "id": "fd3772dc-fc46-442c-8865-f912075a062c",
+      "name": "Guardar Interpretação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4096,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-needs",
+              "leftValue": "={{ $('Parse Interpretação').first().json.precisa_confirmacao }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "053c4eb4-4305-45eb-86c0-02925b7837cb",
+      "name": "Gate — precisa confirmação?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -3872,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Eventos/{{ $('Criar Evento').first().json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'pendente', pendente_desde: $now.toISO() } }) }}",
+        "options": {}
+      },
+      "id": "8d26c7df-26fc-4981-9c1b-1b96c821282f",
+      "name": "Marcar Pendente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3648,
+        -608
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ estado: 'pergunta', pergunta: $('Parse Interpretação').first().json.pergunta, opcoes: $('Parse Interpretação').first().json.opcoes, transcricao: $('Parse Interpretação').first().json.transcricao, eventos: $('Parse Interpretação').first().json.eventos, dominante: $('Parse Interpretação').first().json.interpretacao.dominante, evento_id: $('Parse Interpretação').first().json.ref }) }}",
+        "options": {}
+      },
+      "id": "a3189be3-ff67-46d7-9ec1-be38320dad48",
+      "name": "Responder (pergunta)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -3424,
+        -608
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-tem-eventos",
+              "leftValue": "={{ !$('Parse Interpretação').first().json.sem_accao }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a8b961ea-065b-4854-87c5-a69de4802a06",
+      "name": "IF Tem eventos (auto)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -3648,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PREP COMMITTER — monta o bilhete no formato exacto que o Committer consome:\n// { _contexto_n8n: { evento_ref, vendedor, resposta_vendedor, lead_id }, eventos: [...], meta: {...} }\nconst s = $('Parse Interpretação').first().json;\n\nconst eventos = Array.isArray(s.eventos) ? s.eventos : [];\nif (!eventos.length) throw new Error('Nada para comprometer: array de eventos vazio.');\n\n// lead_id: o primeiro que estiver resolvido no lote\nconst lead_id = s.lead_id\n  || (eventos.find(e => e.ancora && e.ancora.lead_id) || { ancora: {} }).ancora.lead_id\n  || null;\n\nif (!lead_id) throw new Error('Sem lead_id resolvido — o Committer nao pode escrever sem lead.');\n\nreturn [{\n  json: {\n    _contexto_n8n: {\n      evento_ref: s.ref,                        // casa com o campo Ref do registo EVENTOS\n      vendedor: s.vendedor || null,\n      resposta_vendedor: s.resposta || 'sim',\n      lead_id,\n    },\n    eventos,\n    meta: s.meta || {},\n  }\n}];\n"
+      },
+      "id": "6039f4e4-28b6-4161-9a27-235a89f3e9ae",
+      "name": "Prep Committer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3424,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "7DoKXQGDJH4yivLK",
+        "options": {}
+      },
+      "id": "64569056-0dfe-4918-9028-0da52f8dac96",
+      "name": "Chamar Committer (C)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -3200,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Eventos/{{ $('Criar Evento').first().json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'comprometido' } }) }}",
+        "options": {}
+      },
+      "id": "d8e52cdb-deca-4076-8899-4e27fb026fa8",
+      "name": "Marcar Comprometido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2976,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ estado: 'comprometido', mensagem: 'Registado com sucesso.', lead_id: $('Parse Interpretação').first().json.lead_id, eventos: $('Parse Interpretação').first().json.eventos }) }}",
+        "options": {}
+      },
+      "id": "e23c0994-ebf0-4434-9c15-4b4b6c6346af",
+      "name": "Responder (comprometido)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -2752,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ estado: 'sem_acao', mensagem: 'Não identifiquei nenhuma ação a registar.', transcricao: $('Parse Interpretação').first().json.transcricao }) }}",
+        "options": {}
+      },
+      "id": "7309ecc4-b3ca-4d72-8f1a-8f80b3d55215",
+      "name": "Responder (sem ação)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -3424,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://olivedrab-cat-986392.hostingersite.com/webhook/cav-secretaria-prompt-gemini",
+        "options": {}
+      },
+      "id": "ca82a295-4d93-4341-bece-dd1fd074d3eb",
+      "name": "System Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4656,
+        -320
+      ]
+    },
+    {
+      "id": "gemini-adapter-01",
+      "name": "Adaptar Resposta (Gemini)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4364,
+        -296
+      ],
+      "parameters": {
+        "jsCode": "const raw = $json;\nlet texto = '';\ntry { texto = (raw.candidates[0].content.parts || []).map(p => p.text || '').join(''); } catch (e) {}\nreturn [{ json: { content: [ { type: 'text', text: texto } ] } }];\n"
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// MONTAR SCHEMA (Gemini) — responseSchema baseline + reescrita dinamica dos enums por agencia (README_GEMINI.md §4).\nconst schema = JSON.parse(\"{\\n  \\\"_comentario\\\": \\\"responseSchema para Gemini (generationConfig.responseSchema + responseMimeType: application/json). Baseline UNIVERSAL — ver README_GEMINI §4: os enums de `estagio_destino` e `motivo` devem ser reescritos em runtime a partir de SEQUENCIA_ESTAGIOS / ETAPAS_OBRIGATORIAS / MOTIVOS_SAIDA da agência, senão a configuração por agência deixa de ter efeito. Remover esta chave antes de enviar.\\\",\\n  \\\"type\\\": \\\"object\\\",\\n  \\\"propertyOrdering\\\": [\\\"eventos\\\", \\\"meta\\\"],\\n  \\\"required\\\": [\\\"eventos\\\", \\\"meta\\\"],\\n  \\\"properties\\\": {\\n    \\\"eventos\\\": {\\n      \\\"type\\\": \\\"array\\\",\\n      \\\"description\\\": \\\"Ordem fixa (§6): contacto · factos ditos · inferências. Array vazio quando não há acção registável (§4.1).\\\",\\n      \\\"items\\\": {\\n        \\\"type\\\": \\\"object\\\",\\n        \\\"propertyOrdering\\\": [\\n          \\\"id\\\", \\\"tipo\\\", \\\"categoria\\\", \\\"par\\\", \\\"ancora\\\", \\\"dados\\\",\\n          \\\"nota_ficheiro\\\", \\\"confirmacao_humana\\\", \\\"opcoes_confirmacao\\\",\\n          \\\"confirmado_por\\\", \\\"evento_pendente_id\\\", \\\"confianca\\\",\\n          \\\"requer_confirmacao\\\", \\\"avisos\\\"\\n        ],\\n        \\\"required\\\": [\\\"id\\\", \\\"tipo\\\", \\\"categoria\\\", \\\"par\\\", \\\"ancora\\\", \\\"dados\\\", \\\"requer_confirmacao\\\"],\\n        \\\"properties\\\": {\\n          \\\"id\\\": { \\\"type\\\": \\\"string\\\", \\\"description\\\": \\\"e1, e2, e3… sequencial dentro deste array.\\\" },\\n          \\\"tipo\\\": {\\n            \\\"type\\\": \\\"string\\\",\\n            \\\"enum\\\": [\\\"contacto\\\", \\\"mudanca_estagio\\\", \\\"proposta\\\", \\\"estado_comercial\\\", \\\"lead_nova\\\", \\\"passo_vendedor\\\", \\\"agendamento\\\", \\\"pendencia\\\", \\\"redacao_mensagem\\\", \\\"briefing\\\", \\\"correcao\\\"]\\n          },\\n          \\\"categoria\\\": {\\n            \\\"type\\\": \\\"string\\\",\\n            \\\"description\\\": \\\"Deriva mecanicamente do tipo (tabela §4.0): contacto/mudanca_estagio/proposta/estado_comercial/lead_nova → nota; passo_vendedor/agendamento → evento; pendencia → pendencia; redacao_mensagem/briefing/correcao → outro.\\\",\\n            \\\"enum\\\": [\\\"evento\\\", \\\"nota\\\", \\\"pendencia\\\", \\\"outro\\\"]\\n          },\\n          \\\"par\\\": {\\n            \\\"type\\\": \\\"string\\\",\\n            \\\"nullable\\\": true,\\n            \\\"description\\\": \\\"§10.18. Nos seis tipos que são metade de um facto: o `id` do evento irmão, escrito NO ACTO de gerar este. `ja_la_esta` quando a lead já está nesse estágio ou além. `null` nos restantes tipos. Nunca aponta para um id que não vais escrever.\\\"\\n          },\\n          \\\"ancora\\\": {\\n            \\\"type\\\": \\\"object\\\",\\n            \\\"propertyOrdering\\\": [\\\"n_candidatos\\\", \\\"estado\\\", \\\"lead_id\\\", \\\"nome_exibicao\\\", \\\"telefone\\\", \\\"nome_dito\\\", \\\"resolvida_por\\\", \\\"candidatos\\\"],\\n            \\\"required\\\": [\\\"n_candidatos\\\", \\\"estado\\\", \\\"lead_id\\\"],\\n            \\\"properties\\\": {\\n              \\\"n_candidatos\\\": {\\n                \\\"type\\\": \\\"integer\\\",\\n                \\\"description\\\": \\\"P4 — conta ANTES de classificar. Número de candidatos de CANDIDATOS que correspondem ao nome dito. O estado sai deste número, por aritmética.\\\"\\n              },\\n              \\\"estado\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"description\\\": \\\"1 candidato → resolvida (com lead_id preenchido). 2+ → ambigua. 0 → nova, ou nao_aplicavel se não houver lead nem acção. O nome ter vindo parcial NÃO entra nesta conta.\\\",\\n                \\\"enum\\\": [\\\"resolvida\\\", \\\"ambigua\\\", \\\"nova\\\", \\\"nao_aplicavel\\\"]\\n              },\\n              \\\"lead_id\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"nome_exibicao\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Primeiro e último nome. null se ambigua.\\\" },\\n              \\\"telefone\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"nome_dito\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Como foi dito no áudio.\\\" },\\n              \\\"resolvida_por\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"enum\\\": [\\\"nome\\\", \\\"contexto\\\", \\\"confirmacao\\\", \\\"pendente\\\"]\\n              },\\n              \\\"candidatos\\\": {\\n                \\\"type\\\": \\\"array\\\",\\n                \\\"description\\\": \\\"Preenchido quando estado = ambigua. Dois ou mais — com um só, o estado é resolvida.\\\",\\n                \\\"items\\\": {\\n                  \\\"type\\\": \\\"object\\\",\\n                  \\\"propertyOrdering\\\": [\\\"id\\\", \\\"nome\\\", \\\"telefone\\\", \\\"fase\\\", \\\"confianca\\\"],\\n                  \\\"required\\\": [\\\"id\\\", \\\"nome\\\"],\\n                  \\\"properties\\\": {\\n                    \\\"id\\\": { \\\"type\\\": \\\"string\\\" },\\n                    \\\"nome\\\": { \\\"type\\\": \\\"string\\\" },\\n                    \\\"telefone\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n                    \\\"fase\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n                    \\\"confianca\\\": { \\\"type\\\": \\\"number\\\", \\\"nullable\\\": true }\\n                  }\\n                }\\n              }\\n            }\\n          },\\n          \\\"dados\\\": {\\n            \\\"type\\\": \\\"object\\\",\\n            \\\"description\\\": \\\"Objecto SEMPRE — um tipo sem campos próprios leva {}, nunca null. Só os campos do tipo em causa. A ordem abaixo é deliberada: os campos que OBRIGAM (prova_de_entrega, derivada_de, fase_origem/motivo/desfecho_proposto) vêm antes dos campos que eles autorizam.\\\",\\n            \\\"propertyOrdering\\\": [\\n              \\\"prova_de_entrega\\\", \\\"derivada_de\\\", \\\"fase_origem\\\", \\\"motivo\\\", \\\"motivo_livre\\\",\\n              \\\"desfecho_proposto\\\", \\\"estagio_destino\\\", \\\"gatilho\\\", \\\"subtipo\\\", \\\"desfecho\\\",\\n              \\\"depende_de\\\", \\\"descricao\\\", \\\"origem\\\", \\\"data_prometida\\\",\\n              \\\"tarefa\\\", \\\"prazo\\\", \\\"follow_up_auto\\\", \\\"follow_up_prazo\\\",\\n              \\\"titulo\\\", \\\"quando\\\", \\\"resumo\\\", \\\"valor\\\", \\\"data_dita\\\",\\n              \\\"nome\\\", \\\"telefone\\\", \\\"tipo_credito\\\", \\\"origem_lead\\\",\\n              \\\"alvo\\\", \\\"ancora_errada\\\", \\\"ancora_correta\\\", \\\"pergunta\\\"\\n            ],\\n            \\\"properties\\\": {\\n              \\\"prova_de_entrega\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"§3.7.3 — citação LITERAL do áudio que prova que o valor chegou ao cliente. Obrigatório e nunca null em `proposta` e em `mudanca_estagio` → proposta_enviada. Se não consegues citar sem montar a frase, não houve entrega: apagas os dois e a lead fica em aprovado.\\\"\\n              },\\n              \\\"derivada_de\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"§4.7.2 — id da mudanca_estagio DESTE array que gera esta pendência. Obrigatório e nunca null se origem = inferida_por_estagio. Sem id de onde copiar, a pendência não se escreve.\\\"\\n              },\\n              \\\"fase_origem\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"SAÍDA (S2/S3) — o fase_atual do candidato, copiado tal e qual. Obrigatório em toda a saída.\\\" },\\n              \\\"motivo\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"SAÍDA — obrigatório. Os três primeiros só com declaração de saída do vendedor.\\\",\\n                \\\"enum\\\": [\\\"nao_atendeu\\\", \\\"atendeu_mas_nao_podia_falar\\\", \\\"ligar_mais_tarde\\\", \\\"sem_interesse\\\", \\\"nao_encontrou_imovel\\\", \\\"aguarda_taxas\\\", \\\"adiou_a_compra\\\", \\\"sem_perfil_de_credito\\\", \\\"banco_recusou\\\", \\\"desistiu_depois_de_aprovado\\\", \\\"escolheu_concorrencia\\\", \\\"ja_nao_precisa_do_emprestimo\\\", \\\"comprou_sem_financiamento\\\", \\\"nao_quer_mais_saber\\\", \\\"outro\\\"]\\n              },\\n              \\\"motivo_livre\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Só quando motivo = outro.\\\" },\\n              \\\"desfecho_proposto\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"SAÍDA — obrigatório. É uma proposta ao Vigilante e NÃO se pergunta (N6). indefinido é o valor por defeito e a resposta certa na maioria dos áudios.\\\",\\n                \\\"enum\\\": [\\\"definitiva\\\", \\\"espera\\\", \\\"indefinido\\\"]\\n              },\\n              \\\"estagio_destino\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"Lista fechada (§3.6). Reescrever este enum em runtime a partir de SEQUENCIA_ESTAGIOS + ETAPAS_OBRIGATORIAS da agência.\\\",\\n                \\\"enum\\\": [\\\"lead\\\", \\\"aguarda_documentos\\\", \\\"aguarda_decisao_banco\\\", \\\"aprovado\\\", \\\"proposta_enviada\\\", \\\"aguarda_banco\\\", \\\"escritura_marcada\\\", \\\"fecho\\\", \\\"nutricao\\\"]\\n              },\\n              \\\"gatilho\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"A palavra ou frase do áudio que atesta a transição (§3.7.2).\\\" },\\n              \\\"subtipo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"desfecho\\\": {\\n                \\\"type\\\": \\\"string\\\",\\n                \\\"nullable\\\": true,\\n                \\\"description\\\": \\\"contacto — obrigatório sempre que a tentativa falhou (§3.6.2). É o campo de que o Vigilante vive.\\\",\\n                \\\"enum\\\": [\\\"nao_atendeu\\\", \\\"nao_podia_falar\\\", \\\"sem_resposta_mensagem\\\", \\\"numero_invalido\\\", \\\"atendeu\\\"]\\n              },\\n              \\\"depende_de\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"enum\\\": [\\\"cliente\\\", \\\"banco\\\", \\\"terceiro\\\"] },\\n              \\\"descricao\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Pendência: acção concreta, com verbo e dono (crivo 1 do §4.7.0).\\\" },\\n              \\\"origem\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"enum\\\": [\\\"explicita\\\", \\\"inferida_por_estagio\\\"] },\\n              \\\"data_prometida\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"AAAA-MM-DD, resolvida por consulta ao calendário. Horizonte ≤ 30 dias (crivo 2).\\\" },\\n              \\\"tarefa\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"prazo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"AAAA-MM-DD. Resolve-se pelo calendário como qualquer outra data. null se nenhuma data foi dita — e não se pergunta.\\\" },\\n              \\\"follow_up_auto\\\": { \\\"type\\\": \\\"boolean\\\", \\\"nullable\\\": true },\\n              \\\"follow_up_prazo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"titulo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"quando\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"agendamento — AAAA-MM-DDTHH:MM. Sem data não há agendamento: é passo_vendedor.\\\" },\\n              \\\"resumo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"valor\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"data_dita\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"SAÍDA — data de retoma dita pelo vendedor, resolvida pelo calendário. null se não foi dita. Não estimes.\\\" },\\n              \\\"nome\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"telefone\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"tipo_credito\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"origem_lead\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"alvo\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"ancora_errada\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"ancora_correta\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n              \\\"pergunta\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true }\\n            }\\n          },\\n          \\\"nota_ficheiro\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Texto corrido em PT-PT, sem opinião nem juízo pessoal (§5.1). null quando não permitido.\\\" },\\n          \\\"confirmacao_humana\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"Pergunta em PT-PT, uma por DECISÃO, que enuncia TODOS os resultados que vão ser escritos. null se coberto por outro evento (§6.1). Nunca contém nomes de campos, tipos ou estágios em código.\\\" },\\n          \\\"opcoes_confirmacao\\\": {\\n            \\\"type\\\": \\\"array\\\",\\n            \\\"items\\\": {\\n              \\\"type\\\": \\\"object\\\",\\n              \\\"propertyOrdering\\\": [\\\"valor\\\", \\\"etiqueta\\\"],\\n              \\\"required\\\": [\\\"valor\\\", \\\"etiqueta\\\"],\\n              \\\"properties\\\": {\\n                \\\"valor\\\": { \\\"type\\\": \\\"string\\\", \\\"description\\\": \\\"id da lead, `sim` ou `nao`. NUNCA definitiva/espera/indefinido — o desfecho não se pergunta (F3).\\\" },\\n                \\\"etiqueta\\\": { \\\"type\\\": \\\"string\\\" }\\n              }\\n            }\\n          },\\n          \\\"confirmado_por\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true, \\\"description\\\": \\\"id do evento cuja confirmação já cobre este. null se é este que pergunta.\\\" },\\n          \\\"evento_pendente_id\\\": { \\\"type\\\": \\\"string\\\", \\\"nullable\\\": true },\\n          \\\"confianca\\\": { \\\"type\\\": \\\"number\\\", \\\"nullable\\\": true },\\n          \\\"requer_confirmacao\\\": { \\\"type\\\": \\\"boolean\\\", \\\"description\\\": \\\"true por defeito. false apenas se tipo ∈ {redacao_mensagem, briefing} OU (tipo ∈ FLAGS_AUTO E ancora.estado = resolvida). A confiança nunca dispensa a confirmação.\\\" },\\n          \\\"avisos\\\": { \\\"type\\\": \\\"array\\\", \\\"items\\\": { \\\"type\\\": \\\"string\\\" }, \\\"description\\\": \\\"Uma linha por incerteza: fonética, resolução por contexto, recuo de estágio, campo em falta na entrada. Nunca raciocínio.\\\" }\\n        }\\n      }\\n    },\\n    \\\"meta\\\": {\\n      \\\"type\\\": \\\"object\\\",\\n      \\\"propertyOrdering\\\": [\\\"multiplas_accoes\\\", \\\"confirmacoes\\\", \\\"transcricao_incerta\\\", \\\"sem_accao\\\", \\\"transcricao_invalida_multilead\\\", \\\"leads_detetadas\\\"],\\n      \\\"required\\\": [\\\"multiplas_accoes\\\", \\\"confirmacoes\\\", \\\"transcricao_incerta\\\", \\\"sem_accao\\\", \\\"transcricao_invalida_multilead\\\"],\\n      \\\"properties\\\": {\\n        \\\"multiplas_accoes\\\": { \\\"type\\\": \\\"boolean\\\" },\\n        \\\"confirmacoes\\\": { \\\"type\\\": \\\"integer\\\", \\\"description\\\": \\\"Número de eventos com confirmacao_humana preenchida. Se o array tem pelo menos um evento/nota/pendencia, é ≥ 1 — nunca zero (N5).\\\" },\\n        \\\"transcricao_incerta\\\": { \\\"type\\\": \\\"boolean\\\" },\\n        \\\"sem_accao\\\": { \\\"type\\\": \\\"boolean\\\" },\\n        \\\"transcricao_invalida_multilead\\\": { \\\"type\\\": \\\"boolean\\\" },\\n        \\\"leads_detetadas\\\": { \\\"type\\\": \\\"array\\\", \\\"items\\\": { \\\"type\\\": \\\"string\\\" }, \\\"description\\\": \\\"Só se preenche quando transcricao_invalida_multilead = true (§4.4).\\\" }\\n      }\\n    }\\n  }\\n}\\n\");\ndelete schema._comentario;\nconst d = schema.properties.eventos.items.properties.dados.properties;\n\nlet dinamico = {};\ntry { dinamico = ($('Montar Payload').first().json || {}).dinamico || {}; } catch (e) {}\n\nconst seq = (dinamico.SEQUENCIA_ESTAGIOS && dinamico.SEQUENCIA_ESTAGIOS.ordem) || [];\nconst extra = (dinamico.ETAPAS_OBRIGATORIAS || []).map(e => e.estagio).filter(Boolean);\nif (seq.length) d.estagio_destino.enum = [...new Set([...seq, ...extra, 'nutricao'])];\n\nreturn [{ json: { data: $json.data, schema } }];"
+      },
+      "id": "5c4190cc-f6b8-49d1-a596-bbba8294ff65",
+      "name": "Montar Schema (Gemini)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4764,
+        -416
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (voz/texto)": {
+      "main": [
+        [
+          {
+            "node": "Prep Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Input": {
+      "main": [
+        [
+          {
+            "node": "IF Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Áudio?": {
+      "main": [
+        [
+          {
+            "node": "Base64 → Binário",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Transcrição (texto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base64 → Binário": {
+      "main": [
+        [
+          {
+            "node": "Whisper (transcrição)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper (transcrição)": {
+      "main": [
+        [
+          {
+            "node": "Transcrição (áudio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcrição (áudio)": {
+      "main": [
+        [
+          {
+            "node": "Criar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcrição (texto)": {
+      "main": [
+        [
+          {
+            "node": "Criar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Evento": {
+      "main": [
+        [
+          {
+            "node": "Get Comercial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Comercial": {
+      "main": [
+        [
+          {
+            "node": "Get CANDIDATOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CANDIDATOS": {
+      "main": [
+        [
+          {
+            "node": "Get CONFIG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CONFIG": {
+      "main": [
+        [
+          {
+            "node": "Montar Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Payload": {
+      "main": [
+        [
+          {
+            "node": "System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Interpretação": {
+      "main": [
+        [
+          {
+            "node": "Guardar Interpretação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Interpretação": {
+      "main": [
+        [
+          {
+            "node": "Gate — precisa confirmação?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate — precisa confirmação?": {
+      "main": [
+        [
+          {
+            "node": "Marcar Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Tem eventos (auto)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Pendente": {
+      "main": [
+        [
+          {
+            "node": "Responder (pergunta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Tem eventos (auto)?": {
+      "main": [
+        [
+          {
+            "node": "Prep Committer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder (sem ação)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Committer": {
+      "main": [
+        [
+          {
+            "node": "Chamar Committer (C)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Committer (C)": {
+      "main": [
+        [
+          {
+            "node": "Marcar Comprometido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Comprometido": {
+      "main": [
+        [
+          {
+            "node": "Responder (comprometido)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "System Prompt": {
+      "main": [
+        [
+          {
+            "node": "Montar Schema (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Secretária (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Adaptar Resposta (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adaptar Resposta (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Parse Interpretação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Schema (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Chamar Secretária (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

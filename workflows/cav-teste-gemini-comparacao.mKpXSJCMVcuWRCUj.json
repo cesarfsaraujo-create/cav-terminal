@@ -1,0 +1,278 @@
+{
+  "id": "mKpXSJCMVcuWRCUj",
+  "name": "CAV — TESTE Gemini (comparação)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n2",
+      "name": "Entrada teste",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nreturn [{ json: {\n  transcricao: \"Teresa Nogueira enviou os documentos ao banco. Ficou de ir ao banco na proxima semana reunir com eles.\",\n  vendedor_nome: \"Cesar\"\n} }];\n"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Get CANDIDATOS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/Leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "NOT({estagio} = 'nutricao')"
+            },
+            {
+              "name": "pageSize",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Get CONFIG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appIdD2RG5S0lWvfV/CONFIG",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Montar Payload (teste)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\n// MONTAR PAYLOAD (TESTE GEMINI) — mesma logica/formato da producao, dados reais do Airtable.\nconst base = $('Entrada teste').first().json;\nconst trans = base.transcricao || '';\nconst VENDEDOR = base.vendedor_nome || 'Desconhecido';\n\nconst SEQ_UNIVERSAL = ['lead','aguarda_documentos','aguarda_decisao_banco','aprovado',\n                       'proposta_enviada','aguarda_banco','escritura_marcada','fecho'];\n\nlet cfgRows = [];\ntry { cfgRows = ($('Get CONFIG').first().json.records) || []; } catch (e) {}\nconst cfg = {};\nfor (const r of cfgRows) {\n  const f = r.fields || {};\n  const k = f.chave || f.Chave || f.key || f.Nome || f.nome;\n  const v = f.valor !== undefined ? f.valor : (f.Valor !== undefined ? f.Valor : f.value);\n  if (!k) continue;\n  let parsed = v;\n  if (typeof v === 'string') { try { parsed = JSON.parse(v); } catch (e) { parsed = v; } }\n  cfg[String(k).trim().toLowerCase()] = parsed;\n}\nconst seqCfg = cfg['sequencia_estagios'] || cfg['sequencia'] || null;\nconst SEQUENCIA_ESTAGIOS = { ordem: (seqCfg && seqCfg.ordem) || (Array.isArray(seqCfg) ? seqCfg : SEQ_UNIVERSAL) };\nconst ETAPAS_OBRIGATORIAS = cfg['etapas_obrigatorias'] || [];\nconst FLAGS_AUTO = cfg['flags_auto'] || [];\n\nlet leadRecs = [];\ntry { leadRecs = ($('Get CANDIDATOS').first().json.records) || []; } catch (e) {}\nconst hoje = new Date();\nconst diasDesde = iso => {\n  if (!iso) return null;\n  const d = new Date(iso); if (isNaN(d)) return null;\n  return Math.floor((hoje - d) / 86400000);\n};\nconst CANDIDATOS = leadRecs.map(r => {\n  const f = r.fields || {};\n  const fase = f.estagio || f.Estagio || f['Estágio'] || 'lead';\n  const idx = SEQUENCIA_ESTAGIOS.ordem.indexOf(fase);\n  const cand = {\n    id: r.id,\n    nome: f.Nome || f.nome || '',\n    telefone: f.Telefone || f.telefone || null,\n    fase_atual: fase,\n    tipo: f.tipo || 'aquisicao',\n    ultima_nota: f.ultima_nota || null,\n  };\n  if (idx >= 0) cand.indice_fase = idx;\n  const dd = diasDesde(f.ultimo_contacto || f.Data_ultimo_contacto || null);\n  if (dd !== null) cand.dias_desde_ultimo_contacto = dd;\n  return cand;\n});\n\nconst DIAS = ['domingo','segunda-feira','terca-feira','quarta-feira','quinta-feira','sexta-feira','sabado'];\nconst MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst iso = d => d.toISOString().slice(0, 10);\n\nconst CALENDARIO = [];\nfor (let i = 0; i <= 30; i++) {\n  const d = new Date(hoje.getTime() + i * 86400000);\n  CALENDARIO.push({ data: iso(d), dia_semana: DIAS[d.getDay()], offset_dias: i });\n}\nconst CALENDARIO_MESES = [];\nfor (let m = 0; m < 12; m++) {\n  const d = new Date(hoje.getFullYear(), hoje.getMonth() + m, 1);\n  CALENDARIO_MESES.push({ mes: MESES[d.getMonth()], ano: d.getFullYear(), dia_1: iso(d), offset_meses: m });\n}\nconst DATA_HOJE = iso(hoje) + ' (' + DIAS[hoje.getDay()] + ')';\n\nconst dinamico = {\n  DATA_HOJE, VENDEDOR, TRANSCRICAO: trans, CANDIDATOS, CALENDARIO, CALENDARIO_MESES,\n  SEQUENCIA_ESTAGIOS, ETAPAS_OBRIGATORIAS, FLAGS_AUTO,\n};\n\nconst mensagem_utilizador = Object.entries(dinamico)\n  .map(([k, v]) => k + ': ' + (typeof v === 'string' ? v : JSON.stringify(v)))\n  .join('\\n\\n');\n\nreturn [{ json: { vendedor: VENDEDOR, n_candidatos: CANDIDATOS.length, dinamico, mensagem_utilizador } }];\n"
+      }
+    },
+    {
+      "id": "n6",
+      "name": "System Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "url": "https://olivedrab-cat-986392.hostingersite.com/webhook/cav-secretaria-prompt",
+        "options": {}
+      }
+    },
+    {
+      "id": "n7",
+      "name": "Montar Corpo Gemini",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst sys = $json.data;\nconst msg = $('Montar Payload (teste)').first().json.mensagem_utilizador;\nreturn [{ json: {\n  system_instruction: { parts: [{ text: sys }] },\n  contents: [{ role: 'user', parts: [{ text: msg }] }]\n} }];\n"
+      }
+    },
+    {
+      "id": "n8",
+      "name": "Chamar Secretaria (Gemini) TESTE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Zs54VAbrgvIn56RG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "n9",
+      "name": "Mostrar Resultado (teste)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst raw = $json;\nlet texto = null;\ntry { texto = raw.candidates[0].content.parts[0].text; } catch (e) {}\nlet parsed = null;\nif (texto) { try { parsed = JSON.parse(texto); } catch (e) {} }\nconst pacote = {\n  transcricao_teste: $('Entrada teste').first().json.transcricao,\n  resposta_texto: texto,\n  resposta_json: parsed,\n};\nreturn [{ json: { pacote_string: JSON.stringify(pacote) } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Entrada teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada teste": {
+      "main": [
+        [
+          {
+            "node": "Get CANDIDATOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CANDIDATOS": {
+      "main": [
+        [
+          {
+            "node": "Get CONFIG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CONFIG": {
+      "main": [
+        [
+          {
+            "node": "Montar Payload (teste)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Payload (teste)": {
+      "main": [
+        [
+          {
+            "node": "System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "System Prompt": {
+      "main": [
+        [
+          {
+            "node": "Montar Corpo Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Corpo Gemini": {
+      "main": [
+        [
+          {
+            "node": "Chamar Secretaria (Gemini) TESTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Secretaria (Gemini) TESTE": {
+      "main": [
+        [
+          {
+            "node": "Mostrar Resultado (teste)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

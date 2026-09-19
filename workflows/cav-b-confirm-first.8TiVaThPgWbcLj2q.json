@@ -1,0 +1,339 @@
+{
+  "id": "8TiVaThPgWbcLj2q",
+  "name": "CAV · B · Confirm-first",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WORKFLOW B — ver §5 da ESPECIFICAÇÃO\nResposta do vendedor -> acha o pendente -> DISPATCHER -> reenvia EVENTO_PENDENTE à Secretária -> lote confirmado -> Committer (sim) ou rejeitado (não).\n\n⚠️ DISPATCHER é a costura de maior risco: um 'Sim' tratado como áudio novo = lixo.",
+        "height": 260,
+        "width": 400
+      },
+      "id": "a483035c-938e-48f5-a6d0-16e3c83ad4a4",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c053e59f-afb3-4fc9-a4f5-28d3de05baf9",
+      "name": "Manual Trigger (placeholder resposta)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        32,
+        368
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b6b89f06-2ad1-4646-8dd8-65cf9efe79f6",
+      "name": "Identificar vendedor + resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblTVJwcq6AHKM3iJ",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "182b48d4-288f-4fba-b7ac-1174426c4371",
+      "name": "Achar pendente (EVENTOS)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        464,
+        368
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "EVENTOS filterByFormula: Comercial = {vendedor} AND Estado = 'pendente' (mais recente). Ler interpretacao + Ref."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "9a8ed0f3-281e-4651-b649-5010a18feaf6",
+      "name": "Dispatcher: há pendente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        688,
+        368
+      ],
+      "notes": "SIM -> confirmação (continua). NÃO -> áudio novo: Execute Workflow A e termina."
+    },
+    {
+      "parameters": {
+        "workflowId": "rtO4v6gZnXDmYjFZ",
+        "options": {}
+      },
+      "id": "952981e0-d53f-4127-91cb-e391e0529fea",
+      "name": "→ Workflow A (áudio novo)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        928,
+        544
+      ],
+      "notes": "PLACEHOLDER: chamar o Workflow A quando NÃO há pendente."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "id": "374fd09b-b3eb-43b1-98e5-9b62d8643b14",
+      "name": "Montar EVENTO_PENDENTE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bc724144-b947-4d36-b5c5-8c4e8413f7e0",
+      "name": "Chamar Secretária (confirmação)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1152,
+        240
+      ],
+      "notes": "PLACEHOLDER: system = v2.12; user = EVENTO_PENDENTE + resposta. Devolve o lote confirmado (evento_pendente_id preenchido, confirmacoes:0)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "aa5207b4-77b9-4ddc-8922-47e1372cbacc",
+      "name": "Sim / Não",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        240
+      ],
+      "notes": "resposta == 'sim' -> Committer. senão -> rejeitado."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "id": "7bbeed65-b73a-4ce4-8a57-3c20d0bcf8ab",
+      "name": "Preparar payload Committer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "7DoKXQGDJH4yivLK",
+        "options": {}
+      },
+      "id": "029cff6d-a691-4220-85bf-6bf4ec3e109f",
+      "name": "→ Committer (Execute Workflow)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        160
+      ],
+      "notes": "PLACEHOLDER: chamar o sub-workflow Committer com o payload."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblTVJwcq6AHKM3iJ",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3a5deb4a-ff83-4101-94b2-1332a3dc1134",
+      "name": "EVENTOS → rejeitado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1584,
+        368
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "Ramo 'não': Estado=rejeitado + reenviar a interpretação corrigida / repetir pergunta (placeholder envio)."
+    }
+  ],
+  "connections": {
+    "Manual Trigger (placeholder resposta)": {
+      "main": [
+        [
+          {
+            "node": "Identificar vendedor + resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar vendedor + resposta": {
+      "main": [
+        [
+          {
+            "node": "Achar pendente (EVENTOS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Achar pendente (EVENTOS)": {
+      "main": [
+        [
+          {
+            "node": "Dispatcher: há pendente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatcher: há pendente?": {
+      "main": [
+        [
+          {
+            "node": "Montar EVENTO_PENDENTE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "→ Workflow A (áudio novo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar EVENTO_PENDENTE": {
+      "main": [
+        [
+          {
+            "node": "Chamar Secretária (confirmação)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Secretária (confirmação)": {
+      "main": [
+        [
+          {
+            "node": "Sim / Não",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sim / Não": {
+      "main": [
+        [
+          {
+            "node": "Preparar payload Committer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EVENTOS → rejeitado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar payload Committer": {
+      "main": [
+        [
+          {
+            "node": "→ Committer (Execute Workflow)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

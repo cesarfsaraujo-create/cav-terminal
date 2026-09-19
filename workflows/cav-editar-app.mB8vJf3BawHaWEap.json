@@ -1,0 +1,2374 @@
+{
+  "id": "mB8vJf3BawHaWEap",
+  "name": "CAV · Editar (App)",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cav-editar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -144
+      ],
+      "id": "52869bcf-f871-43ac-92c4-a7e7b0dd39df",
+      "name": "Webhook",
+      "webhookId": "adbabc81-2f31-448d-a363-57727a02368c"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "editar_lead",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "de21919b-87de-46b8-9ac2-0ab737dd4b3b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "editar_lead"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a46ba23e-0718-49c3-8820-a94b27f773df",
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "nota_manual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "nota_manual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "86cd423e-7718-42fa-a076-96a57d5df00d",
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "concluir_tarefa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "concluir_tarefa"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "449132d2-d964-493f-a8c4-a4dfe94bc9ac",
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "criar_evento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "criar_evento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4ba94a1d-be73-4b15-b9df-6bb5e5e69386",
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "editar_evento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "editar_evento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5d1e3dd1-d118-4dca-bd52-e87ada6dbaed",
+                    "leftValue": "={{$json.body.acao}}",
+                    "rightValue": "apagar_evento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "apagar_evento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "df3d1989-c0a7-48d1-a643-1a15393fc5b3",
+                    "leftValue": "={{ $json.body.acao}}",
+                    "rightValue": "criar_lead",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "criar_lead"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -144
+      ],
+      "id": "901dc87c-b67f-4f5c-b807-6d345e07bdd2",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblO1ODpXI5GInKGn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telefone": "={{  $json.body.campos.telefone }}",
+            "Valor": "={{$json.body.campos.valor }}",
+            "origem_lead": "={{ $json.body.campos.origem_lead }}",
+            "estagio": "={{  $json.body.campos.estagio }}",
+            "tipo": "={{  $json.body.campos.tipo }}",
+            "id": "={{ $json.body.lead_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ativa",
+                  "value": "ativa"
+                },
+                {
+                  "name": "em_triagem",
+                  "value": "em_triagem"
+                },
+                {
+                  "name": "sala_de_espera",
+                  "value": "sala_de_espera"
+                },
+                {
+                  "name": "fechada",
+                  "value": "fechada"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Comercial",
+              "displayName": "Comercial",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor",
+              "displayName": "Valor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "origem_lead",
+              "displayName": "origem_lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estagio",
+              "displayName": "estagio",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "lead",
+                  "value": "lead"
+                },
+                {
+                  "name": "aguarda_documentos",
+                  "value": "aguarda_documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                },
+                {
+                  "name": "nutricao",
+                  "value": "nutricao"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fase_origem",
+              "displayName": "fase_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "leads",
+                  "value": "leads"
+                },
+                {
+                  "name": "aguarda documentos",
+                  "value": "aguarda documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_saida",
+              "displayName": "motivo_saida",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "nao_atendeu",
+                  "value": "nao_atendeu"
+                },
+                {
+                  "name": "atendeu_mas_nao_podia_falar",
+                  "value": "atendeu_mas_nao_podia_falar"
+                },
+                {
+                  "name": "ligar_mais_tarde",
+                  "value": "ligar_mais_tarde"
+                },
+                {
+                  "name": "sem_interesse",
+                  "value": "sem_interesse"
+                },
+                {
+                  "name": "nao_encontrou_imovel",
+                  "value": "nao_encontrou_imovel"
+                },
+                {
+                  "name": "aguarda_taxas",
+                  "value": "aguarda_taxas"
+                },
+                {
+                  "name": "adiou_a_compra",
+                  "value": "adiou_a_compra"
+                },
+                {
+                  "name": "sem_perfil_de_credito",
+                  "value": "sem_perfil_de_credito"
+                },
+                {
+                  "name": "banco_recusou",
+                  "value": "banco_recusou"
+                },
+                {
+                  "name": "desistiu_depois_de_aprovado",
+                  "value": "desistiu_depois_de_aprovado"
+                },
+                {
+                  "name": "escolheu_concorrencia",
+                  "value": "escolheu_concorrencia"
+                },
+                {
+                  "name": "ja_nao_precisa_do_emprestimo",
+                  "value": "ja_nao_precisa_do_emprestimo"
+                },
+                {
+                  "name": "comprou_sem_financiamento",
+                  "value": "comprou_sem_financiamento"
+                },
+                {
+                  "name": "nao_quer_mais_saber",
+                  "value": "nao_quer_mais_saber"
+                },
+                {
+                  "name": "outro",
+                  "value": "outro"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_livre",
+              "displayName": "motivo_livre",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "desfecho_proposto",
+              "displayName": "desfecho_proposto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                },
+                {
+                  "name": "definitiva",
+                  "value": "definitiva"
+                },
+                {
+                  "name": "espera",
+                  "value": "espera"
+                },
+                {
+                  "name": "indefinido",
+                  "value": "indefinido"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "data_dita",
+              "displayName": "data_dita",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Eventos",
+              "displayName": "Eventos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "tansferencia",
+                  "value": "tansferencia"
+                },
+                {
+                  "name": "aquisicao",
+                  "value": "aquisicao"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "alcunha",
+              "displayName": "alcunha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ultima_nota",
+              "displayName": "ultima_nota",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Histórico",
+              "displayName": "Histórico",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tarefas",
+              "displayName": "Tarefas",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Pendências",
+              "displayName": "Pendências",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Agenda",
+              "displayName": "Agenda",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "banco_origem",
+              "displayName": "banco_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "cgd - caixa geral depositos",
+                  "value": "cgd - caixa geral depositos"
+                },
+                {
+                  "name": "bcp - millenium",
+                  "value": "bcp - millenium"
+                },
+                {
+                  "name": "novobanco",
+                  "value": "novobanco"
+                },
+                {
+                  "name": "santander",
+                  "value": "santander"
+                },
+                {
+                  "name": "bpi",
+                  "value": "bpi"
+                },
+                {
+                  "name": "montepio",
+                  "value": "montepio"
+                },
+                {
+                  "name": "credito_agricola",
+                  "value": "credito_agricola"
+                },
+                {
+                  "name": "bankinter",
+                  "value": "bankinter"
+                },
+                {
+                  "name": "abanca",
+                  "value": "abanca"
+                },
+                {
+                  "name": "banco_ctt",
+                  "value": "banco_ctt"
+                },
+                {
+                  "name": "uci",
+                  "value": "uci"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -384
+      ],
+      "id": "65fe8332-30ae-4f33-93d3-19704f6dc287",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblO1ODpXI5GInKGn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.body.lead_id }}",
+            "ultima_nota": "={{ $json.body.nota }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ativa",
+                  "value": "ativa"
+                },
+                {
+                  "name": "em_triagem",
+                  "value": "em_triagem"
+                },
+                {
+                  "name": "sala_de_espera",
+                  "value": "sala_de_espera"
+                },
+                {
+                  "name": "fechada",
+                  "value": "fechada"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Comercial",
+              "displayName": "Comercial",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Valor",
+              "displayName": "Valor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "origem_lead",
+              "displayName": "origem_lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "estagio",
+              "displayName": "estagio",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "lead",
+                  "value": "lead"
+                },
+                {
+                  "name": "aguarda_documentos",
+                  "value": "aguarda_documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                },
+                {
+                  "name": "nutricao",
+                  "value": "nutricao"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "fase_origem",
+              "displayName": "fase_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "leads",
+                  "value": "leads"
+                },
+                {
+                  "name": "aguarda documentos",
+                  "value": "aguarda documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_saida",
+              "displayName": "motivo_saida",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "nao_atendeu",
+                  "value": "nao_atendeu"
+                },
+                {
+                  "name": "atendeu_mas_nao_podia_falar",
+                  "value": "atendeu_mas_nao_podia_falar"
+                },
+                {
+                  "name": "ligar_mais_tarde",
+                  "value": "ligar_mais_tarde"
+                },
+                {
+                  "name": "sem_interesse",
+                  "value": "sem_interesse"
+                },
+                {
+                  "name": "nao_encontrou_imovel",
+                  "value": "nao_encontrou_imovel"
+                },
+                {
+                  "name": "aguarda_taxas",
+                  "value": "aguarda_taxas"
+                },
+                {
+                  "name": "adiou_a_compra",
+                  "value": "adiou_a_compra"
+                },
+                {
+                  "name": "sem_perfil_de_credito",
+                  "value": "sem_perfil_de_credito"
+                },
+                {
+                  "name": "banco_recusou",
+                  "value": "banco_recusou"
+                },
+                {
+                  "name": "desistiu_depois_de_aprovado",
+                  "value": "desistiu_depois_de_aprovado"
+                },
+                {
+                  "name": "escolheu_concorrencia",
+                  "value": "escolheu_concorrencia"
+                },
+                {
+                  "name": "ja_nao_precisa_do_emprestimo",
+                  "value": "ja_nao_precisa_do_emprestimo"
+                },
+                {
+                  "name": "comprou_sem_financiamento",
+                  "value": "comprou_sem_financiamento"
+                },
+                {
+                  "name": "nao_quer_mais_saber",
+                  "value": "nao_quer_mais_saber"
+                },
+                {
+                  "name": "outro",
+                  "value": "outro"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_livre",
+              "displayName": "motivo_livre",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "desfecho_proposto",
+              "displayName": "desfecho_proposto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                },
+                {
+                  "name": "definitiva",
+                  "value": "definitiva"
+                },
+                {
+                  "name": "espera",
+                  "value": "espera"
+                },
+                {
+                  "name": "indefinido",
+                  "value": "indefinido"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "data_dita",
+              "displayName": "data_dita",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Eventos",
+              "displayName": "Eventos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "tansferencia",
+                  "value": "tansferencia"
+                },
+                {
+                  "name": "aquisicao",
+                  "value": "aquisicao"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "alcunha",
+              "displayName": "alcunha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ultima_nota",
+              "displayName": "ultima_nota",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Histórico",
+              "displayName": "Histórico",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tarefas",
+              "displayName": "Tarefas",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Pendências",
+              "displayName": "Pendências",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Agenda",
+              "displayName": "Agenda",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "banco_origem",
+              "displayName": "banco_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "cgd - caixa geral depositos",
+                  "value": "cgd - caixa geral depositos"
+                },
+                {
+                  "name": "bcp - millenium",
+                  "value": "bcp - millenium"
+                },
+                {
+                  "name": "novobanco",
+                  "value": "novobanco"
+                },
+                {
+                  "name": "santander",
+                  "value": "santander"
+                },
+                {
+                  "name": "bpi",
+                  "value": "bpi"
+                },
+                {
+                  "name": "montepio",
+                  "value": "montepio"
+                },
+                {
+                  "name": "credito_agricola",
+                  "value": "credito_agricola"
+                },
+                {
+                  "name": "bankinter",
+                  "value": "bankinter"
+                },
+                {
+                  "name": "abanca",
+                  "value": "abanca"
+                },
+                {
+                  "name": "banco_ctt",
+                  "value": "banco_ctt"
+                },
+                {
+                  "name": "uci",
+                  "value": "uci"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        -256
+      ],
+      "id": "afe093fe-24b8-4ae1-a824-f8109c6fbd68",
+      "name": "Update record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWKZ4s9VlSS2FC7",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.body.tarefa_id }}",
+            "estado": "={{  $json.body.estado }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "tarefa",
+              "displayName": "tarefa",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Lead",
+              "displayName": "Lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Eventos",
+              "displayName": "Eventos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "prazo",
+              "displayName": "prazo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "aberta",
+                  "value": "aberta"
+                },
+                {
+                  "name": "concluida",
+                  "value": "concluida"
+                },
+                {
+                  "name": "cancelada",
+                  "value": "cancelada"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "follow_up_auto",
+              "displayName": "follow_up_auto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "follow_up_prazo",
+              "displayName": "follow_up_prazo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        -144
+      ],
+      "id": "0db33d4d-39ae-4baa-b4fc-de7ac332f0d2",
+      "name": "Update record2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7miNQOYxtEvquL",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "titulo": "={{ $json.body.campos.titulo }}",
+            "Lead": "={{  [$json.body.campos.lead_id] }}",
+            "quando": "={{  DateTime.fromISO($json.body.campos.quando, {zone: 'Europe/Lisbon'}).toISO() }}",
+            "estado": "={{  $json.body.campos.estado }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead",
+              "displayName": "Lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Evento",
+              "displayName": "Evento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quando",
+              "displayName": "quando",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "agendado",
+                  "value": "agendado"
+                },
+                {
+                  "name": "realizado",
+                  "value": "realizado"
+                },
+                {
+                  "name": "cancelado",
+                  "value": "cancelado"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "be3ac04f-e964-4293-b197-7c6dfee2c031",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst campos = body.campos || {};\nconst out = { id: body.evento_id };\nfor (const key of Object.keys(campos)) {\n    if (key === 'quando') {\n          out.quando = DateTime.fromISO(campos.quando, { zone: 'Europe/Lisbon' }).toISO();\n    } else {\n          out[key] = campos[key];\n    }\n}\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        112
+      ],
+      "id": "91ab322a-b03a-4bc8-a83a-5a20b07fb9bf",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7miNQOYxtEvquL",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead",
+              "displayName": "Lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Evento",
+              "displayName": "Evento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quando",
+              "displayName": "quando",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "agendado",
+                  "value": "agendado"
+                },
+                {
+                  "name": "realizado",
+                  "value": "realizado"
+                },
+                {
+                  "name": "cancelado",
+                  "value": "cancelado"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        112
+      ],
+      "id": "3dbd60f6-d509-4254-a7a9-394618f451c8",
+      "name": "Update record3",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteRecord",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7miNQOYxtEvquL",
+          "mode": "id"
+        },
+        "id": "={{ $json.body.evento_id }}"
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        224
+      ],
+      "id": "83b0af26-61c0-4858-aa92-eb8c10eac249",
+      "name": "Delete a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n    \"ok\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        928,
+        304
+      ],
+      "id": "7015d86a-e342-43d8-b452-f4b95c3b6ec8",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appIdD2RG5S0lWvfV",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblO1ODpXI5GInKGn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Valor": "={{$json.body.campos.valor}}",
+            "Nome": "={{ $json.body.campos.nome }}",
+            "Status": "ativa",
+            "Comercial": "={{ $json.body.comercial_id ? [$json.body.comercial_id] : [] }}",
+            "Telefone": "={{ $json.body.campos.telefone }}",
+            "origem_lead": "={{ $json.body.campos.origem_lead }}",
+            "estagio": "={{ $json.body.campos.estagio || 'lead' }}",
+            "tipo": "={{ $json.body.campos.tipo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ativa",
+                  "value": "ativa"
+                },
+                {
+                  "name": "em_triagem",
+                  "value": "em_triagem"
+                },
+                {
+                  "name": "sala_de_espera",
+                  "value": "sala_de_espera"
+                },
+                {
+                  "name": "fechada",
+                  "value": "fechada"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Comercial",
+              "displayName": "Comercial",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valor",
+              "displayName": "Valor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "origem_lead",
+              "displayName": "origem_lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estagio",
+              "displayName": "estagio",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "lead",
+                  "value": "lead"
+                },
+                {
+                  "name": "aguarda_documentos",
+                  "value": "aguarda_documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                },
+                {
+                  "name": "nutricao",
+                  "value": "nutricao"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fase_origem",
+              "displayName": "fase_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "leads",
+                  "value": "leads"
+                },
+                {
+                  "name": "aguarda documentos",
+                  "value": "aguarda documentos"
+                },
+                {
+                  "name": "aguarda_decisao_banco",
+                  "value": "aguarda_decisao_banco"
+                },
+                {
+                  "name": "aprovado",
+                  "value": "aprovado"
+                },
+                {
+                  "name": "proposta_enviada",
+                  "value": "proposta_enviada"
+                },
+                {
+                  "name": "aguarda_banco",
+                  "value": "aguarda_banco"
+                },
+                {
+                  "name": "escritura_marcada",
+                  "value": "escritura_marcada"
+                },
+                {
+                  "name": "fecho",
+                  "value": "fecho"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_saida",
+              "displayName": "motivo_saida",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "nao_atendeu",
+                  "value": "nao_atendeu"
+                },
+                {
+                  "name": "atendeu_mas_nao_podia_falar",
+                  "value": "atendeu_mas_nao_podia_falar"
+                },
+                {
+                  "name": "ligar_mais_tarde",
+                  "value": "ligar_mais_tarde"
+                },
+                {
+                  "name": "sem_interesse",
+                  "value": "sem_interesse"
+                },
+                {
+                  "name": "nao_encontrou_imovel",
+                  "value": "nao_encontrou_imovel"
+                },
+                {
+                  "name": "aguarda_taxas",
+                  "value": "aguarda_taxas"
+                },
+                {
+                  "name": "adiou_a_compra",
+                  "value": "adiou_a_compra"
+                },
+                {
+                  "name": "sem_perfil_de_credito",
+                  "value": "sem_perfil_de_credito"
+                },
+                {
+                  "name": "banco_recusou",
+                  "value": "banco_recusou"
+                },
+                {
+                  "name": "desistiu_depois_de_aprovado",
+                  "value": "desistiu_depois_de_aprovado"
+                },
+                {
+                  "name": "escolheu_concorrencia",
+                  "value": "escolheu_concorrencia"
+                },
+                {
+                  "name": "ja_nao_precisa_do_emprestimo",
+                  "value": "ja_nao_precisa_do_emprestimo"
+                },
+                {
+                  "name": "comprou_sem_financiamento",
+                  "value": "comprou_sem_financiamento"
+                },
+                {
+                  "name": "nao_quer_mais_saber",
+                  "value": "nao_quer_mais_saber"
+                },
+                {
+                  "name": "outro",
+                  "value": "outro"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "motivo_livre",
+              "displayName": "motivo_livre",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "desfecho_proposto",
+              "displayName": "desfecho_proposto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                },
+                {
+                  "name": "definitiva",
+                  "value": "definitiva"
+                },
+                {
+                  "name": "espera",
+                  "value": "espera"
+                },
+                {
+                  "name": "indefinido",
+                  "value": "indefinido"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "data_dita",
+              "displayName": "data_dita",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Eventos",
+              "displayName": "Eventos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "tansferencia",
+                  "value": "tansferencia"
+                },
+                {
+                  "name": "aquisicao",
+                  "value": "aquisicao"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "alcunha",
+              "displayName": "alcunha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ultima_nota",
+              "displayName": "ultima_nota",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Histórico",
+              "displayName": "Histórico",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tarefas",
+              "displayName": "Tarefas",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Pendências",
+              "displayName": "Pendências",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Agenda",
+              "displayName": "Agenda",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "banco_origem",
+              "displayName": "banco_origem",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "cgd - caixa geral depositos",
+                  "value": "cgd - caixa geral depositos"
+                },
+                {
+                  "name": "bcp - millenium",
+                  "value": "bcp - millenium"
+                },
+                {
+                  "name": "novobanco",
+                  "value": "novobanco"
+                },
+                {
+                  "name": "santander",
+                  "value": "santander"
+                },
+                {
+                  "name": "bpi",
+                  "value": "bpi"
+                },
+                {
+                  "name": "montepio",
+                  "value": "montepio"
+                },
+                {
+                  "name": "credito_agricola",
+                  "value": "credito_agricola"
+                },
+                {
+                  "name": "bankinter",
+                  "value": "bankinter"
+                },
+                {
+                  "name": "abanca",
+                  "value": "abanca"
+                },
+                {
+                  "name": "banco_ctt",
+                  "value": "banco_ctt"
+                },
+                {
+                  "name": "uci",
+                  "value": "uci"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        144
+      ],
+      "id": "d1f4e7f8-f0b9-4578-9890-ea6dbd51f9a9",
+      "name": "Create a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oThQIIbePs7HgmJD",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update record1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update record2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete a record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Update record3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a record": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

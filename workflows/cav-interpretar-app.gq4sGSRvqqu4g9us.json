@@ -1,0 +1,12 @@
+{
+  "id": "gq4sGSRvqqu4g9us",
+  "name": "CAV - Interpretar (App)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodes": [],
+  "connections": {}
+}
